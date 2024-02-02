@@ -1,0 +1,2 @@
+databricks-connect==13.3.0  # align this with the cluster version
+pytest
