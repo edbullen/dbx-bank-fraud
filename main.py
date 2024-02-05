@@ -56,13 +56,13 @@ if __name__ == '__main__':
     else:
         print("Test Module ran with: Failure")
 
-    #run_file_loader("hsbc", "hr", source_folder="bank_transactions", target_table="transactions", format_type="csv")
+    run_file_loader("hsbc", "hr", source_folder="bank_transactions", target_table="transactions", format_type="csv")
 
-    #run_fraud_loader("hsbc", "hr"
-    #                 , url="https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/data/fraud_reports/fraud_reports_part_b.csv"
-    #                 , target_table="fraud_reports"
-    #                 , format_type="csv"
-    #                 , columns=["is_fraud", "id"])
+    run_fraud_loader("hsbc", "hr"
+                     , url="https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/data/fraud_reports/fraud_reports_part_b.csv"
+                     , target_table="fraud_reports"
+                     , format_type="csv"
+                     , columns=["is_fraud", "id"])
 
     run_silver_load("hsbc", "hr")
 
