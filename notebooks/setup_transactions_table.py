@@ -18,6 +18,10 @@ schema = dbutils.widgets.get("schema")
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 # Import functions
 from pyspark.sql.functions import col, current_timestamp
 
@@ -27,6 +31,14 @@ table_name = f"{catalog}.{schema}.transactions"
 
 #username = spark.sql("SELECT regexp_replace(current_user(), '[^a-zA-Z0-9]', '_')").first()[0]
 checkpoint_path = f"/tmp/{catalog}/{schema}/transactions/_checkpoint/"
+
+# COMMAND ----------
+
+print(f"{catalog}.{schema}.transactions")
+
+# COMMAND ----------
+
+
 
 # Configure Auto Loader to ingest CSV data to a Delta table
 (spark.readStream
@@ -43,4 +55,6 @@ checkpoint_path = f"/tmp/{catalog}/{schema}/transactions/_checkpoint/"
 
 # COMMAND ----------
 
-
+# Cleardown
+dbutils.fs.rm(checkpoint_path, True)
+spark.sql(f"DROP TABLE IF EXISTS {table_name}")
