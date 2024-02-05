@@ -25,6 +25,11 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### View Transactions loaded by File
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC SELECT source_file, count(*) 
 # MAGIC FROM ${catalog}.${schema}.transactions
@@ -32,4 +37,18 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC # View Transaction History
 
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC DESCRIBE HISTORY hsbc.hr.transactions
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT source_file, count(*) 
+# MAGIC FROM 
+# MAGIC (SELECT * FROM ${catalog}.${schema}.transactions VERSION AS OF 1)
+# MAGIC GROUP BY source_file;
