@@ -26,7 +26,9 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT DISTINCT(source_file) FROM ${catalog}.${schema}.transactions;
+# MAGIC SELECT source_file, count(*) 
+# MAGIC FROM ${catalog}.${schema}.transactions
+# MAGIC GROUP BY source_file;
 
 # COMMAND ----------
 

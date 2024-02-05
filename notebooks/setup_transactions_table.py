@@ -43,10 +43,4 @@ checkpoint_path = f"/tmp/{catalog}/{schema}/transactions/_checkpoint/"
 
 # COMMAND ----------
 
-# Cleardown
-#dbutils.fs.rm(checkpoint_path, True)
-#spark.sql(f"DROP TABLE IF EXISTS {table_name}")
-
-# COMMAND ----------
-
 
