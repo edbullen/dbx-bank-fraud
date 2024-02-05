@@ -14,6 +14,11 @@ dbutils.widgets.text("source_folder", defaultValue='', label='field')
 dbutils.widgets.text("target_table", defaultValue='', label='field')
 dbutils.widgets.text("format_type", defaultValue='', label='field')
 
+catalog = dbutils.widgets.get("catalog")
+schema = dbutils.widgets.get("schema")
+source_folder = dbutils.widgets.get("source_folder")
+target_table = dbutils.widgets.get("target_table")
+format_type = dbutils.widgets.get("format_type")
 
 
 # COMMAND ----------
