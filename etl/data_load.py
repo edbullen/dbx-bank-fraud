@@ -8,6 +8,8 @@ from databricks.connect.session import DatabricksSession as SparkSession
 def auto_loader(spark, catalog, schema, source_folder, target_table, format_type="csv"):
     """ load raw file-data from a Unity Catalog Volume location and write to Delta Table
 
+    documentation: https://docs.databricks.com/en/ingestion/auto-loader/options.html
+
     :param spark     SparkSession
     :param catalog   String - Unity catalog location for input file and output table
     :param schema    String - Unity schema location for input file and output table
