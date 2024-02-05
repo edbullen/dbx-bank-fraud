@@ -1,8 +1,11 @@
 # Import functions
 from pyspark.sql.functions import col, current_timestamp
+from delta.tables import *
 
-from databricks.connect import DatabricksSession
-from databricks.connect.session import DatabricksSession as SparkSession
+import pandas as pd
+
+# from databricks.connect import DatabricksSession
+# from databricks.connect.session import DatabricksSession as SparkSession
 
 
 def auto_loader(spark, catalog, schema, source_folder, target_table, format_type="csv"):
@@ -38,3 +41,53 @@ def auto_loader(spark, catalog, schema, source_folder, target_table, format_type
      .option("checkpointLocation", checkpoint_path)
      .trigger(availableNow=True)
      .toTable(table_name))
+
+
+def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", columns=None):
+    """ get data from a web-url and merge write to the target_table
+
+    :param spark     SparkSession
+    :param catalog   String - Unity catalog location for input file and output table
+    :param schema    String - Unity schema location for input file and output table
+    :param source_folder String - folder / directory name in which input file is located
+    :param target_table  String - name of output tablr
+    :param format_type   String - input file format (CSV or JSON)
+    :param columns   List - optional list of columns to filter before writing out
+
+    """
+
+    #delta_table = DeltaTable.forPath(spark, f"{catalog}.{schema}.{target_table}")
+
+    if format_type == 'csv':
+        pandas_df = pd.read_csv(url)
+        if columns:
+            pandas_df = pandas_df[columns]
+
+        df = spark.createDataFrame(pandas_df)
+
+        # Write PySpark DataFrame to Delta table
+        df.write.format("delta").mode("overwrite")\
+            .saveAsTable(f"{catalog}.{schema}.{target_table}")
+
+    else:
+        raise ValueError(f"Unhandled file format type: {format_type}")
+
+
+def load_silver_transactions(spark, catalog, schema):
+    """ Load the Silver Transactions Table based on bronze txns joined with fraud reports"""
+
+    spark.sql("""
+    MERGE INTO hsbc.hr.silver_transactions as target
+    USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data), 
+         regexp_replace(countryOrig, "--", "") as countryOrig, 
+         regexp_replace(countryDest, "--", "") as countryDest, 
+         newBalanceOrig - oldBalanceOrig as diffOrig, 
+         newBalanceDest - oldBalanceDest as diffDest
+         FROM hsbc.hr.transactions t
+        LEFT JOIN hsbc.hr.fraud_reports f USING(id)) as source
+    ON source.id = target.id
+    WHEN NOT MATCHED
+      THEN INSERT *
+    """
+    )
+
