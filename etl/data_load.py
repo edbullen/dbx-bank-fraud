@@ -4,9 +4,6 @@ from delta.tables import *
 
 import pandas as pd
 
-# from databricks.connect import DatabricksSession
-# from databricks.connect.session import DatabricksSession as SparkSession
-
 
 def auto_loader(spark, catalog, schema, source_folder, target_table, format_type="csv"):
     """ load raw file-data from a Unity Catalog Volume location and write to Delta Table
@@ -56,8 +53,6 @@ def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", c
 
     """
 
-    #delta_table = DeltaTable.forPath(spark, f"{catalog}.{schema}.{target_table}")
-
     if format_type == 'csv':
         pandas_df = pd.read_csv(url)
         if columns:
@@ -76,14 +71,14 @@ def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", c
 def load_silver_transactions(spark, catalog, schema):
     """ Load the Silver Transactions Table based on bronze txns joined with fraud reports"""
 
-    spark.sql("""
-    MERGE INTO hsbc.hr.silver_transactions as target
+    spark.sql(f"""
+    MERGE INTO {catalog}.{schema}.silver_transactions as target
     USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data), 
          regexp_replace(countryOrig, "--", "") as countryOrig, 
          regexp_replace(countryDest, "--", "") as countryDest, 
          newBalanceOrig - oldBalanceOrig as diffOrig, 
          newBalanceDest - oldBalanceDest as diffDest
-         FROM hsbc.hr.transactions t
+         FROM {catalog}.{schema}.transactions t
         LEFT JOIN hsbc.hr.fraud_reports f USING(id)) as source
     ON source.id = target.id
     WHEN NOT MATCHED
