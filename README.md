@@ -19,6 +19,12 @@ Three different types of simple ETL load / transform operations are provided in 
 + SQL wrapped in PySpark for merge+join operations on Delta table-data in the `load_silver_transactions()` function
 
 
+#### Example SQL Code
+Example queries are in the `./sql` folder:
++ `amount_by_country.sql` 
++ `amount_over_time.sql`  
+These can be used to underpin dashboard visualizations or reporting. 
+
 ### Sample Data
 
 Sample data for running the pipeline is in `./data/`
@@ -34,7 +40,7 @@ Use the two notebooks
 + `./jobs/run_transaction_file_load.py`
 + `./jobs/run_silver_table_load.py`
 
-to call the ETL code in ./etl and run the ETL pipeline.  These read the parameters configured in the Databricks Job run-time configuration and pass them to the code execution.
+to call the ETL code in `./etl` and run the ETL pipeline.  These read the parameters configured in the Databricks Job run-time configuration and pass them to the code execution.
 
 
 ### Development Environment
