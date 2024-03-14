@@ -32,3 +32,7 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # MAGIC %sql
 # MAGIC SELECT count(*) FROM ${catalog}.${schema}.gold_transactions;
+
+
+
+

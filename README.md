@@ -11,6 +11,13 @@
 
 ![ETL_Flow](./notebooks/images/data_flow.png)     
 
+##### Example ETL Code
+
+Three different types of simple ETL load / transform operations are provided in `./etl/data_load.py`:
++ streaming in updates from files staged in cloud storage in the `auto_loader()` function.
++ custom code to pull data from a web URL in the `web_url_pull()` function
++ SQL wrapped in PySpark for merge+join operations on Delta table-data in the `load_silver_transactions()` function
+
 
 ### Sample Data
 
