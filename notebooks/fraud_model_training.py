@@ -154,61 +154,63 @@ import time
 mlflow.set_experiment(f"/Users/{current_user}/bank_fraud_experiment")
 # see documentation for shared workspace experiment options: https://docs.databricks.com/en/mlflow/experiments.html 
 
-estimators = 100
-depth = 20
+estimators_list = [10, 20, 100]
+depth_list = [10, 20, 50]
 
 run_timestamp = int(time.time())
 
 # add nested loops here to loop through hyper-paramter grid-search and log results for multiple mlflow runs.
+for estimators in estimators_list:
+  for depth in depth_list:
 
-with mlflow.start_run(run_name=f'bank_fraud_{estimators}_{run_timestamp}'):
+    with mlflow.start_run(run_name=f'bank_fraud_{estimators}_{run_timestamp}'):
 
-  mlflow.sklearn.autolog()
+      mlflow.sklearn.autolog()
 
-  # machine learning model instance with hyperparaemters specified
-  model = RandomForestClassifier(n_estimators=estimators, random_state=0, max_depth=depth, n_jobs=16)
+      # machine learning model instance with hyperparaemters specified
+      model = RandomForestClassifier(n_estimators=estimators, random_state=0, max_depth=depth, n_jobs=16)
 
-  # link preprocessing and modeling code into a pipeline
-  my_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                                ('model', model)
-                              ])
+      # link preprocessing and modeling code into a pipeline
+      my_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                    ('model', model)
+                                  ])
 
-  # Process training data and fit model 
-  my_pipeline.fit(X_train, y_train)
+      # Process training data and fit model 
+      my_pipeline.fit(X_train, y_train)
 
-  # Preprocessing of validation data, get predictions
-  y_pred = my_pipeline.predict(X_test)
+      # Preprocessing of validation data, get predictions
+      y_pred = my_pipeline.predict(X_test)
 
-  # Evaluate the model
-  #score = mean_absolute_error(y_test, preds)
-  #print('MAE:', score)
-  accuracy = accuracy_score(y_test, y_pred)*100
-  prec = precision_score(y_test, y_pred)*100
-  rec = recall_score(y_test, y_pred)*100
-  f1 = f1_score(y_test, y_pred)*100
+      # Evaluate the model
+      #score = mean_absolute_error(y_test, preds)
+      #print('MAE:', score)
+      accuracy = accuracy_score(y_test, y_pred)*100
+      prec = precision_score(y_test, y_pred)*100
+      rec = recall_score(y_test, y_pred)*100
+      f1 = f1_score(y_test, y_pred)*100
 
-  #print(f"Accuracy: {accuracy} Precision: {prec} Recall: {rec} F1 Score: {f1}")
+      #print(f"Accuracy: {accuracy} Precision: {prec} Recall: {rec} F1 Score: {f1}")
 
-  # explicitly log metrics in MLflow (many metrics are auto-logged anyway)
-  mlflow.log_metric('accuracy', accuracy)
-  mlflow.log_metric('f1_score', f1)
-  mlflow.log_param('max_depth', depth)
-  mlflow.log_param('n_estimators', estimators)
+      # explicitly log metrics in MLflow (many metrics are auto-logged anyway)
+      mlflow.log_metric('accuracy', accuracy)
+      mlflow.log_metric('f1_score', f1)
+      mlflow.log_param('max_depth', depth)
+      mlflow.log_param('n_estimators', estimators)
 
-  # Record a confusion matrix plot for the model test results
-  fig, ax = plt.subplots(figsize=(6, 6))  # set dimensions of the plot
-  CM = confusion_matrix(y_test, y_pred)
-  ax = sns.heatmap(CM, annot=True, cmap='Blues', fmt='.8g')
-  mlflow.log_figure(plt.gcf(), "test_confusion_matrix.png")
+      # Record a confusion matrix plot for the model test results
+      fig, ax = plt.subplots(figsize=(6, 6))  # set dimensions of the plot
+      CM = confusion_matrix(y_test, y_pred)
+      ax = sns.heatmap(CM, annot=True, cmap='Blues', fmt='.8g')
+      mlflow.log_figure(plt.gcf(), "test_confusion_matrix.png")
 
-  # Get the model feature importances - this is after the OHE transform has been applied
-  all_features_importance = model.feature_importances_.round(3)
+      # Get the model feature importances - this is after the OHE transform has been applied
+      all_features_importance = model.feature_importances_.round(3)
 
-  # get the model features factoring in OHE 
-  ohe_features = my_pipeline.named_steps["preprocessor"].named_transformers_["cat"].named_steps["onehot"].get_feature_names_out(categorical_cols).tolist()
-  all_features = numeric_cols + ohe_features
+      # get the model features factoring in OHE 
+      ohe_features = my_pipeline.named_steps["preprocessor"].named_transformers_["cat"].named_steps["onehot"].get_feature_names_out(categorical_cols).tolist()
+      all_features = numeric_cols + ohe_features
 
-  feature_importance = pd.DataFrame({'feature':all_features, 'importance':all_features_importance})
+      feature_importance = pd.DataFrame({'feature':all_features, 'importance':all_features_importance})
 
 
 
