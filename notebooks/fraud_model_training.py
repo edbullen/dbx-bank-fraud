@@ -97,6 +97,8 @@ transactions_pd.head()
 
 # MAGIC %md
 # MAGIC ## Split Into Test / Train Datasets
+# MAGIC
+# MAGIC ![Train-Test-Diag](https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/notebooks/images/train_test_split-procedure.jpg)
 
 # COMMAND ----------
 
