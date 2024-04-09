@@ -1,6 +1,9 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # MLflow Model Training
+# MAGIC
+# MAGIC ![Train-Test-Diag](https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/notebooks/images/mlflow_lifecycle.png)
+# MAGIC
 
 # COMMAND ----------
 
