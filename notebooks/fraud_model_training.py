@@ -1,4 +1,9 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC # MLflow Model Training
+
+# COMMAND ----------
+
 # DBTITLE 1,Set the default schema and catalog
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
@@ -29,6 +34,11 @@ import mlflow
 mlflow.set_registry_uri("databricks-uc")
 
 model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Load Data for Training
 
 # COMMAND ----------
 
@@ -85,6 +95,11 @@ transactions_pd.head()
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Split Into Test / Train Datasets
+
+# COMMAND ----------
+
 # DBTITLE 1,Split to Train and Test dataframes, select Feature cols
 # util for splitting into training and test data
 from sklearn.model_selection import train_test_split
@@ -105,6 +120,11 @@ feature_cols =  numeric_cols + categorical_cols
 #feature_cols =  categorical_cols
 X_train = X_train_full[feature_cols].copy()
 X_test = X_test_full[feature_cols].copy()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Preprocessing Pipeline
 
 # COMMAND ----------
 
@@ -144,6 +164,13 @@ preprocessor = ColumnTransformer(
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Model Training 
+# MAGIC + Grid-Search in MLflow for multiple hyperparameters. 
+# MAGIC + Log metrics and models in an MLflow Experiment.
+
+# COMMAND ----------
+
 # DBTITLE 1,MLFlow training run
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -166,6 +193,9 @@ for estimators in estimators_list:
     with mlflow.start_run(run_name=f'bank_fraud_{estimators}_{run_timestamp}'):
 
       mlflow.sklearn.autolog()
+
+      # Set a tag so we can find this group of experiment runs
+      mlflow.set_tag("project", "bank_fraud_model")
 
       # machine learning model instance with hyperparaemters specified
       model = RandomForestClassifier(n_estimators=estimators, random_state=0, max_depth=depth, n_jobs=16)
