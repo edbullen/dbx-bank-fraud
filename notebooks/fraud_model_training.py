@@ -98,6 +98,10 @@ transactions_pd.head()
 
 # COMMAND ----------
 
+transactions_pd.groupby(['label']).count()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Split Into Test / Train Datasets
 # MAGIC
