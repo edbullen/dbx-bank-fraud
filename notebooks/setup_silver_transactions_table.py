@@ -7,8 +7,14 @@
 
 dbutils.widgets.text(name="catalog", defaultValue='', label='field')
 dbutils.widgets.text("schema", defaultValue='', label='field')
+catalog = dbutils.widgets.get("catalog")
+schema = catalog = dbutils.widgets.get("schema")
 
-table_name = "hsbc.hr.silver_transactions"
+
+
+# COMMAND ----------
+
+table_name = f"{catalog}.{schema}.silver_transactions"
 
 # COMMAND ----------
 
