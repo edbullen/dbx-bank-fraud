@@ -68,17 +68,17 @@ def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", c
         raise ValueError(f"Unhandled file format type: {format_type}")
 
 
-def load_silver_transactions(spark, catalog, schema):
+def load_silver_transactions(spark, catalog, schema, source_table="transactions", target_table="silver_transactions"):
     """ Load the Silver Transactions Table based on bronze txns joined with fraud reports"""
 
     spark.sql(f"""
-    MERGE INTO {catalog}.{schema}.silver_transactions as target
+    MERGE INTO {catalog}.{schema}.{target_table} as target
     USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data), 
          regexp_replace(countryOrig, "--", "") as countryOrig, 
          regexp_replace(countryDest, "--", "") as countryDest, 
          newBalanceOrig - oldBalanceOrig as diffOrig, 
          newBalanceDest - oldBalanceDest as diffDest
-         FROM {catalog}.{schema}.transactions t
+         FROM {catalog}.{schema}.{source_table} t
         LEFT JOIN hsbc.hr.fraud_reports f USING(id)) as source
     ON source.id = target.id
     WHEN NOT MATCHED

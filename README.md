@@ -1,6 +1,6 @@
 # Databricks Demo with Retail Bank Fraud Data
 
-### Pipeline overview
+### Pipeline overview - V1: Azure ADLS and Unity Catalog Volumes
 + Ingest files from Azure ADLS storage container - table `transactions`
   + A Unity Volume needs to be set up in advance which references the location where the files will be staged. See `./notebooks/setup_volume.py` for an example.
   + Copy the `./data/transactions/*.csv` files in the ADLS storage bucket linked to the Unity Volume ref.
@@ -10,6 +10,12 @@
 + Databricks Delta tables `banking_customers` and `country_coordinates` are joined with `silver_transactions` to produce table `gold_transactions`
 
 ![ETL_Flow](./notebooks/images/data_flow.png)     
+
+
+### Pipeline overview - V2: Google Big Query and Unity Catalog Federation
+
+
+![ETL_Flow](./notebooks/images/data_flow_bq.png)   
 
 ##### Example ETL Code
 
