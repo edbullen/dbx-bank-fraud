@@ -2,6 +2,9 @@
 # MAGIC %md
 # MAGIC #Setup Silver Transactions Table
 # MAGIC
+# MAGIC + `silver_transactions` is created in the Unity Catalog location `<catalog>`.`<schema>`  
+# MAGIC + `<transactions_table>` (the name is configurable) is sourced from Unity Catalog location `<source_catalog>`.`<source_schema>`  
+# MAGIC + `<transaction_table>` is joined with `fraud_transactions` which needs to be created in advance in `<catalog>`.`<schema>`    
 
 # COMMAND ----------
 
@@ -18,8 +21,8 @@ dbutils.widgets.text("source_schema", defaultValue='', label='field')
 catalog = dbutils.widgets.get("catalog")
 schema = catalog = dbutils.widgets.get("schema")
 
-catalog = dbutils.widgets.get("source_catalog")
-schema = catalog = dbutils.widgets.get("source_schema")
+source_catalog = dbutils.widgets.get("source_catalog")
+source_schema = catalog = dbutils.widgets.get("source_schema")
 
 transactions_table = dbutils.widgets.get("transactions_table")
 
@@ -27,9 +30,6 @@ transactions_table = dbutils.widgets.get("transactions_table")
 # COMMAND ----------
 
 table_name = f"{catalog}.{schema}.{transactions_table}"
-
-# COMMAND ----------
-
 print(table_name)
 
 # COMMAND ----------
@@ -43,7 +43,7 @@ print(table_name)
 # MAGIC           newBalanceOrig - oldBalanceOrig as diffOrig, 
 # MAGIC           newBalanceDest - oldBalanceDest as diffDest
 # MAGIC FROM ${source_catalog}.${source_schema}.${transactions_table} t
-# MAGIC   LEFT JOIN ${source_catalog}.${source_schema}.fraud_reports f using(id)
+# MAGIC   LEFT JOIN ${catalog}.${schema}.fraud_reports f using(id)
 # MAGIC WHERE 1 = 0;
 
 # COMMAND ----------

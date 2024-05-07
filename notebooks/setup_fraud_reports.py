@@ -26,7 +26,7 @@ print(url)
 # COMMAND ----------
 
 # run the job to merge new transactions in joined with Fraud reports
-data_load.web_url_pull(spark, catalog, schema, url=url, target_table="fraud_reports", format_type="csv")
+data_load.web_url_pull(spark, catalog, schema, url=url, target_table="fraud_reports", format_type="csv", columns=['is_fraud', 'id'])
 
 # COMMAND ----------
 
