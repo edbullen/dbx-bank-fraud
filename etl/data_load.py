@@ -88,7 +88,7 @@ def load_silver_transactions(spark, catalog, schema,
          newBalanceOrig - oldBalanceOrig as diffOrig, 
          newBalanceDest - oldBalanceDest as diffDest
          FROM {source_catalog}.{source_schema}.{source_table} t
-        LEFT JOIN hsbc.hr.fraud_reports f USING(id)) as source
+        LEFT JOIN  {catalog}.{schema}.fraud_reports f USING(id)) as source
     ON source.id = target.id
     WHEN NOT MATCHED
       THEN INSERT *
