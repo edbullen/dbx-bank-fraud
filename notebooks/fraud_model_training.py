@@ -68,6 +68,10 @@ transactions_df = spark.sql("""SELECT id,
 
 # COMMAND ----------
 
+
+
+# COMMAND ----------
+
 # DBTITLE 1,Cast Label to Float
 # cast is_fraud to a float; if there was any bad data, we will get an error
 from pyspark.sql.types import IntegerType, FloatType
@@ -75,7 +79,7 @@ transactions_df = transactions_df.select(transactions_df['*']).withColumn("label
 
 # COMMAND ----------
 
-#display(transactions_df.show(5))
+
 
 # COMMAND ----------
 
@@ -91,6 +95,10 @@ import sys
 
 transactions_pd = transactions_df.toPandas()
 print(sys.getsizeof(transactions_pd))
+
+# COMMAND ----------
+
+mlflow_data = mlflow.data.from_spark(transactions_df)
 
 # COMMAND ----------
 
@@ -202,6 +210,7 @@ for estimators in estimators_list:
     with mlflow.start_run(run_name=f'bank_fraud_{estimators}_{run_timestamp}'):
 
       mlflow.sklearn.autolog()
+      mlflow.log_input(mlflow_data, "training")
 
       # Set a tag so we can find this group of experiment runs
       mlflow.set_tag("project", "bank_fraud_model")

@@ -35,8 +35,8 @@ print(f"MLFlow Experiment name is {experiment_name}")
 import mlflow.sklearn
 mlflow.set_registry_uri('databricks-uc') 
 
-# reference to the model in Unity Catalog, pick the version that has been labeled "production"
-model_version_uri = "models:/hsbc.hr.bank_fraud_predict@production"
+# reference to the model in Unity Catalog, pick the version that has been labeled in Unity Catalog with an alias "production"
+model_version_uri = f"models:/{unity_catalog}.{unity_schema}.bank_fraud_predict@production"
 
 # load the model
 model = mlflow.sklearn.load_model(model_uri=model_version_uri)
@@ -91,6 +91,11 @@ spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions
 
 # COMMAND ----------
 
+# Update the target table lineage with MLflow information
+spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions  
+          SET TBLPROPERTIES ('mlflow_experiment_name'='{experiment_name}', 'mlflow_model_uri'='{model_version_uri}')""")
 
+
+# COMMAND ----------
 
 
