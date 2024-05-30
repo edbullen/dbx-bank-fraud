@@ -1,11 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Setup a Unity Catalog Volume to source Transaction Files from
+# MAGIC # Setup a Unity Catalog Volume to source Transaction Files from Azure ADLS
 # MAGIC The bank transactions are staged in Cloud object store bucket (i.e. ADLS / S3 / GCS)
 # MAGIC   
 # MAGIC Create a Unity Catalog volume that is authorised to access these files so they can be referenced in a CloudFiles Auto Loader job.
 # MAGIC
-# MAGIC This example shows how to setup access to load files from Azure using an Azure Service Principle and a key stored in dbutils.secrets
+# MAGIC This example shows how to setup access to load files from **Azure** using an Azure Service Principle and a key stored in dbutils.secrets
 
 # COMMAND ----------
 
