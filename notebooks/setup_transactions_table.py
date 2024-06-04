@@ -26,7 +26,7 @@ schema = dbutils.widgets.get("schema")
 from pyspark.sql.functions import col, current_timestamp
 
 # Define variables used in code below
-file_path = f"/Volumes/{catalog}/{schema}/bank_transactions/"
+file_path = f"/Volumes/{catalog}/{schema}/transactions_raw/"
 table_name = f"{catalog}.{schema}.transactions"
 
 #username = spark.sql("SELECT regexp_replace(current_user(), '[^a-zA-Z0-9]', '_')").first()[0]
