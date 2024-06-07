@@ -48,14 +48,14 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # Google Storage GS URL location - gs://<bucket>/<path>
 dbutils.widgets.text("txn_bucket_path", defaultValue='', label='field')
-dbutils.widgets.text("cust_bucket_path", defaultValue='', label='field')
-dbutils.widgets.text("country_bucket_path", defaultValue='', label='field')
+dbutils.widgets.text("staging_bucket_path", defaultValue='', label='field')
+dbutils.widgets.text("refdata_bucket_path", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
 txn_bucket_path = dbutils.widgets.get("txn_bucket_path")
-cust_bucket_path = dbutils.widgets.get("cust_bucket_path")
-country_bucket_path = dbutils.widgets.get("country_bucket_path")
+staging_bucket_path = dbutils.widgets.get("staging_bucket_path")
+refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 
 # COMMAND ----------
 
@@ -77,11 +77,11 @@ country_bucket_path = dbutils.widgets.get("country_bucket_path")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.country_raw
-# MAGIC LOCATION '${country_bucket_path}';
+# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.staging
+# MAGIC LOCATION '${staging_bucket_path}';
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.customers_raw
-# MAGIC LOCATION '${cust_bucket_path}';
+# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.refdata_ext
+# MAGIC LOCATION '${refdata_bucket_path}';

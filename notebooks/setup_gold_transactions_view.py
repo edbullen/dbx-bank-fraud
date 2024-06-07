@@ -22,7 +22,7 @@ dbutils.widgets.text("reference_schema", defaultValue='', label='field')
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE VIEW ${catalog}.${schema}.gold_transactions 
+# MAGIC CREATE OR REPLACE VIEW ${silver_catalog}.${silver_schema}.gold_transactions 
 # MAGIC AS 
 # MAGIC   SELECT t.* EXCEPT(countryOrig, countryDest, is_fraud), c.* EXCEPT(id),
 # MAGIC           boolean(coalesce(is_fraud, 0)) as is_fraud,
