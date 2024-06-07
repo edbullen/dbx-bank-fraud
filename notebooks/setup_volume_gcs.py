@@ -47,11 +47,15 @@ dbutils.widgets.text(name="catalog", defaultValue='', label='field')
 dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # Google Storage GS URL location - gs://<bucket>/<path>
-dbutils.widgets.text("external_location_name", defaultValue='', label='field')
+dbutils.widgets.text("txn_bucket_path", defaultValue='', label='field')
+dbutils.widgets.text("cust_bucket_path", defaultValue='', label='field')
+dbutils.widgets.text("country_bucket_path", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
-external_location_name = dbutils.widgets.get("external_location_name")
+txn_bucket_path = dbutils.widgets.get("txn_bucket_path")
+cust_bucket_path = dbutils.widgets.get("cust_bucket_path")
+country_bucket_path = dbutils.widgets.get("country_bucket_path")
 
 # COMMAND ----------
 
@@ -63,9 +67,21 @@ external_location_name = dbutils.widgets.get("external_location_name")
 # DBTITLE 1,Create a Unity Catalog External Volume - path is set up as UC External Location
 # MAGIC %sql
 # MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.transactions_raw
-# MAGIC LOCATION '${external_location_name}';
+# MAGIC LOCATION '${txn_bucket_path}';
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC Path for listing files in the Volume: `/Volumes/<catalog_identifier>/<schema_identifier>/<volume_identifier>/<path>/<file_name>`
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.country_raw
+# MAGIC LOCATION '${country_bucket_path}';
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.customers_raw
+# MAGIC LOCATION '${cust_bucket_path}';
