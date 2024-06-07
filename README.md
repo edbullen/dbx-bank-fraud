@@ -3,7 +3,7 @@
 ## Pipeline overview ##  
 ### V1: Azure ADLS and Unity Catalog Volumes
 + Ingest files from Azure ADLS storage container - table `transactions`
-  + A Unity Volume needs to be set up in advance which references the location where the files will be staged. See `./notebooks/setup_volume.py` for an example.
+  + A Unity Volume needs to be set up in advance which references the location where the files will be staged. See `./notebooks/setup_volume_adls.py` for an example.
   + Copy the `./data/transactions/*.csv` files in the ADLS storage bucket linked to the Unity Volume ref.
   + The Azure ADLS bucket can be replaced with AWS s3 or GCP GCS bucket and the same approach followed.
 + Ingest data from REST API - table `fraud_reports`
@@ -22,6 +22,24 @@
 
 ![ETL_Flow](./notebooks/images/data_flow_gcs_autoloader_dlt.jpg)   
 
+#### Setup Steps
+
+Pre: Clone the git repo in the Workspace.
+
+1. Stage the `banking_customers` and `country_coordinates` data in separate folders in a GCS bucket.
+2. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `bronze_transactions`.
+3. Create three Unity Catalog Volumes to load the three different data-sets from: `transactions_raw`, `country_coordinates`, `banking_customers`
+   + Follow the guide in `./notebooks/setup_volume_gcs` to do this.   
+4. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
+5. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
+
+
+Template GCS or S3 bucket structure:
+```
+<my_bucket>/bronze_transactions
+<my_bucket>/banking_customers
+<my_bucket>/country_coordinates
+```
 
 ## ETL Code and Sample Data
 
@@ -32,6 +50,8 @@ Three different types of simple ETL load / transform operations are provided in 
 + custom code to pull data from a web URL in the `web_url_pull()` function
 + SQL wrapped in PySpark for merge+join operations on Delta table-data in the `load_silver_transactions()` function
 
+In addition, an example using *DLT* ([Delta Live Tables](https://docs.databricks.com/en/delta-live-tables/index.html)) is provided
++ A DLT notebook is located in `./notebooks/setup_silver_transactions_pipeline_DLT`
 
 ### Example SQL Code
 Example queries are in the `./sql` folder:
@@ -56,6 +76,9 @@ Use the two notebooks
 
 to call the ETL code in `./etl` and run the ETL pipeline.  These read the parameters configured in the Databricks Job run-time configuration and pass them to the code execution.
 
+**Alternatively**
+Use DLT
++ `./notebooks/setup_silver_transactions_pipeline_DLT.sql`
 
 ## Development Environment
 
