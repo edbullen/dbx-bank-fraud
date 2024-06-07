@@ -29,17 +29,15 @@ Pre: Clone the git repo in the Workspace.
 1. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `transactions`.
 2. Prepare a GCS bucket and folder for staging data in `staging`. 
    + Stage the `banking_customers` and `country_coordinates` data in separate folders here.
-3. Prepare a GCS bucket and folder for storing external tables in called `refdata_ext`
-4. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
-5. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
-6. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
+3. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
+4. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
+5. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
    + `transactions_raw`
    + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
-7. Create a Unity Catalog Volume called `refdata_ext` to store the external tables.
-8. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
-9. Use the notebook `./notebooks/setup_reference_data_ext` to set up some external tables mapped to the external volume locations.
-10. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
-11. Create the gold view using `./notebooks/setup_gold_transactions_view`
+7. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
+8. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
+9. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
+10. Create the gold view using `./notebooks/setup_gold_transactions_view`
 
 
 Template GCS or S3 bucket structure:
