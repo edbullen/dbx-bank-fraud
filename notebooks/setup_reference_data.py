@@ -1,6 +1,8 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## Setup the Reference Tables as External Tables
+# MAGIC ## Setup the Reference Tables
+# MAGIC
+# MAGIC Static data loaded from CSV and JSON data staged in a cloud storage bucket.
 # MAGIC
 # MAGIC
 
