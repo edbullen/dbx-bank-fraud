@@ -26,14 +26,20 @@
 
 Pre: Clone the git repo in the Workspace.
 
-1. Stage the `banking_customers` and `country_coordinates` data in separate folders in a GCS bucket.
-2. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `transactions`.
-3. Create three Unity Catalog Volumes to load the three different data-sets from: `transactions_raw`, `country_coordinates`, `banking_customers`
-   + Follow the guide in `./notebooks/setup_volume_gcs` to do this.   
-4. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
-5. Use the notebook `./notebooks/setup_reference_data_ext` to set up some external tables mapped to the external volume locations.
-6. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
-7. Create the gold view using `./notebooks/setup_gold_transactions_view`
+1. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `transactions`.
+2. Prepare a GCS bucket and folder for staging data in `staging`. 
+   + Stage the `banking_customers` and `country_coordinates` data in separate folders here.
+3. Prepare a GCS bucket and folder for storing external tables in called `refdata_ext`
+4. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
+5. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
+6. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
+   + `transactions_raw`
+   + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
+7. Create a Unity Catalog Volume called `refdata_ext` to store the external tables.
+8. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
+9. Use the notebook `./notebooks/setup_reference_data_ext` to set up some external tables mapped to the external volume locations.
+10. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
+11. Create the gold view using `./notebooks/setup_gold_transactions_view`
 
 
 Template GCS or S3 bucket structure:
