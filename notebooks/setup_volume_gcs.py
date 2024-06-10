@@ -79,9 +79,3 @@ refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 # MAGIC %sql
 # MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.staging
 # MAGIC LOCATION '${staging_bucket_path}';
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.refdata_ext
-# MAGIC LOCATION '${refdata_bucket_path}';
