@@ -19,7 +19,7 @@ dbutils.widgets.text("refdata_bucket_path", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
-refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
+#refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 
 # COMMAND ----------
 
