@@ -18,7 +18,7 @@
 ![ETL_Flow](./notebooks/images/data_flow_bq.jpg)   
 
 
-### V3: Google GCS and Unity Catalog Volumes + Big Query Federation + DLT
+### V3: Google GCS and Unity Catalog Volumes + DLT
 
 ![ETL_Flow](./notebooks/images/data_flow_gcs_autoloader_dlt.jpg)   
 
