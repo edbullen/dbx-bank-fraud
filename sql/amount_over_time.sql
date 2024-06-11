@@ -2,7 +2,7 @@
 -- use this for populating the Fraud over time sample dashboard, as shown in the README screenshot
 
 -- NOTE: set the Unity Catalog and Schema as appropriate to pick up the location of view gold_transactions
-SELECT, count(1) nbFraudTransactions, sum(amount) sumFraudTransactions
+SELECT ts, count(1) nbFraudTransactions, sum(amount) sumFraudTransactions
 FROM (
     select from_unixtime(unix_timestamp(current_timestamp()) + (step * 3600)) ts, amount
     from gold_transactions
