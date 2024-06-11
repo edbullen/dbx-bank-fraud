@@ -4,6 +4,11 @@
 # MAGIC
 # MAGIC Static data loaded from CSV and JSON data staged in a cloud storage bucket.
 # MAGIC
+# MAGIC Tables:
+# MAGIC + `country_coordinates`  
+# MAGIC + `banking_customers`  
+# MAGIC
+# MAGIC
 # MAGIC
 
 # COMMAND ----------
