@@ -38,34 +38,6 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # View Transaction History
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC DESCRIBE HISTORY hsbc.hr.transactions
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC SELECT source_file, count(*) 
-# MAGIC FROM 
-# MAGIC (SELECT * FROM ${catalog}.${schema}.transactions VERSION AS OF 3)
-# MAGIC GROUP BY source_file;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC select * from hsbc.hr.gold_transactions limit 10;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC select * from hsbc.hr.silver_transactions LIMIT 10;
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC # Query the Gold Transactions View
 
 # COMMAND ----------
