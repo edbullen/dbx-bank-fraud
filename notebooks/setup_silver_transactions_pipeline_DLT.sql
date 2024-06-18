@@ -21,10 +21,17 @@
 
 -- COMMAND ----------
 
+CREATE OR REFRESH LIVE TABLE fraud_reports_stream
+USING DELTA
+AS SELECT *, current_timestamp() as eventTimeFrd
+FROM hsbc.fraud.fraud_reports
+
+-- COMMAND ----------
+
 -- DBTITLE 1,DLT Streaming Table for landing transactions
 CREATE OR REFRESH STREAMING TABLE transactions
 AS SELECT
-  *
+  *, current_timestamp() as eventTimeTxn
 FROM
   STREAM cloud_files(
     "/Volumes/${catalog}/${schema}/transactions_raw",
@@ -37,16 +44,19 @@ FROM
 
 -- COMMAND ----------
 
--- DBTITLE 1,DLT Live Table for combined join of batched Delta Fraud Reports and Streamed Transactions
 CREATE OR REPLACE STREAMING TABLE silver_transactions
 AS
-SELECT t.* EXCEPT(countryOrig, countryDest)  , 
+SELECT t.* EXCEPT(countryOrig, countryDest, eventTimeTxn),
        f.is_fraud,
-         regexp_replace(countryOrig, "--", "") as countryOrig, 
-         regexp_replace(countryDest, "--", "") as countryDest, 
-         newBalanceOrig - oldBalanceOrig as diffOrig, 
-         newBalanceDest - oldBalanceDest as diffDest
-FROM STREAM(LIVE.transactions) t
-LEFT JOIN ${catalog}.${schema}.fraud_reports f
-    ON t.id = f.id
-
+       f.eventTimeFrd,
+       regexp_replace(countryOrig, "--", "") as countryOrig,
+       regexp_replace(countryDest, "--", "") as countryDest,
+       newBalanceOrig - oldBalanceOrig as diffOrig,
+       newBalanceDest - oldBalanceDest as diffDest
+FROM STREAM(LIVE.transactions)
+  WATERMARK eventTimeTxn DELAY OF INTERVAL 24 HOURS t
+LEFT JOIN STREAM(LIVE.fraud_reports_stream) 
+  WATERMARK eventTimeFrd DELAY OF INTERVAL 24 HOURS f
+ON t.id = f.id
+AND f.eventTimeFrd >= t.eventTimeTxn - interval '24 hours'
+AND f.eventTimeFrd <= t.eventTimeTxn
