@@ -46,13 +46,22 @@ schema = dbutils.widgets.get("schema")
 
 # DBTITLE 1,Use Delta Time Travel to Reset the Changes
 # MAGIC %sql
-# MAGIC RESTORE TABLE ${catalog}.${schema}.country_coordinates TO VERSION AS OF 1
+# MAGIC RESTORE TABLE ${catalog}.${schema}.country_coordinates TO VERSION AS OF 0
 
 # COMMAND ----------
 
 # DBTITLE 1,Check the table history
 # MAGIC %sql
 # MAGIC DESC HISTORY ${catalog}.${schema}.country_coordinates
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT DISTINCT(alpha3_code) 
+# MAGIC FROM ${catalog}.${schema}.country_coordinates
+# MAGIC VERSION AS OF 2
+# MAGIC WHERE alpha3_code LIKE 'R%'
+# MAGIC ;
 
 # COMMAND ----------
 
