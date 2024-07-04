@@ -59,9 +59,16 @@ schema = dbutils.widgets.get("schema")
 # MAGIC %sql
 # MAGIC SELECT DISTINCT(alpha3_code) 
 # MAGIC FROM ${catalog}.${schema}.country_coordinates
-# MAGIC VERSION AS OF 2
+# MAGIC VERSION AS OF 1
 # MAGIC WHERE alpha3_code LIKE 'R%'
 # MAGIC ;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT DISTINCT(alpha3_code) AS OF VERSION 0
+# MAGIC FROM ${catalog}.${schema}.country_coordinates
+# MAGIC WHERE alpha3_code LIKE 'R%';
 
 # COMMAND ----------
 

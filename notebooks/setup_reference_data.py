@@ -46,10 +46,10 @@ schema = dbutils.widgets.get("schema")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT * EXCEPT (_rescued_data)
+# MAGIC SELECT * 
 # MAGIC FROM read_files(
 # MAGIC   '/Volumes/${catalog}/${schema}/staging/customers_json',
-# MAGIC   format => 'json')
+# MAGIC   format => 'text')
 # MAGIC
 
 # COMMAND ----------

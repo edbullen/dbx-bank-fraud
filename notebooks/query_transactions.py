@@ -31,9 +31,10 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT source_file, count(*) 
-# MAGIC FROM ${catalog}.${schema}.transactions
-# MAGIC GROUP BY source_file;
+# MAGIC -- this won't work unless Auto Loader has been set up to record the file name on load
+# MAGIC --SELECT source_file, count(*) 
+# MAGIC --FROM ${catalog}.${schema}.transactions
+# MAGIC --GROUP BY source_file;
 
 # COMMAND ----------
 
@@ -53,4 +54,15 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # COMMAND ----------
 
+txn_df = spark.read.table("hsbc.fraud.transactions")
 
+# COMMAND ----------
+
+txn_df.printSchema()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import count
+
+agg_df = txn_df.groupBy("countryOrig").agg(count("*").alias("count_by_countryOrig"))
+agg_df.show()
