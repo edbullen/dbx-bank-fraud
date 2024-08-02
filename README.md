@@ -18,7 +18,7 @@
 ![ETL_Flow](./notebooks/images/data_flow_bq.jpg)   
 
 
-### V3: Google GCS and Unity Catalog Volumes + DLT
+### V3: Google GCS and Unity Catalog Volumes and DLT Streaming Data
 
 ![ETL_Flow](./notebooks/images/data_flow_gcs_autoloader_dlt.jpg)   
 
@@ -33,19 +33,19 @@ Pre: Clone the git repo in the Workspace.
 4. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
 5. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
    + `transactions_raw`
+   + `fraud_raw`
    + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
-7. Setup the `fraud_reports` table: `notebooks/setup_fraud_reports`
 8. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
-9. Create a DLT pipeline, following the instructions in **TBC** and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
+9. Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
 10. Create the gold view using `./notebooks/setup_gold_transactions_view`
 
 
 Template GCS or S3 bucket structure:
-```
-<my_bucket>/bronze_transactions
-<my_bucket>/banking_customers
-<my_bucket>/country_coordinates
-```
++ `<CloudObjectStore>/transactions/` <- Stream transaction CSV files into this location
++ `<CloudObjectStore>/fraud/`       <-Stream fraud report CSV files into this location
++ `<CloudObjectStore>/staging/country_coordinates/`    <- stage the country data here to be read into a managed Delta table using CTAS 
++ `<CloudObjectStore>/staging/customers/`               <- stage the customer data here to be read into a managed Delta table using CTAS     
+
 
 ## ETL Code and Sample Data
 
