@@ -27,17 +27,19 @@
 Pre: Clone the git repo in the Workspace.
 
 1. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `transactions`.
-2. Prepare a GCS bucket and folder for staging data in `staging`. 
+2. *For V3 demo*: Prepare a GCS bucket and folder for loading the `fraud_reports` data into - call this folder `fraud_reports`.
+3. Prepare a GCS bucket and folder for staging data in `staging`. 
    + Stage the `banking_customers` and `country_coordinates` data in separate folders here.
-3. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
-4. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
-5. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
+4. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
+5. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
+6. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
    + `transactions_raw`
    + `fraud_raw`
    + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
-8. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
-9. Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
-10. Create the gold view using `./notebooks/setup_gold_transactions_view`
+7. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
+8a. **V1**, **V2**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
+8b. **V3**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_fraudtxns_pipeline_DLT.sql` as the pipeline Source code. 
+9. Create the gold view using `./notebooks/setup_gold_transactions_view`
 
 
 Template GCS or S3 bucket structure:
@@ -71,7 +73,7 @@ Sample data for running the pipeline is in `./data/`
 
 + `./data/country_coordinates/*` - static data; just manually load the CSV into a delta table.
 + `./data/customers/*` - static data; just manually load the CSV into a delta table.
-+ `./data/fraud_reports/*` - `./etl/data_load.web_url_pull()` pulls data directly from here and stages in the `fraud_reports` table.
++ `./data/fraud_reports/*` - `./etl/data_load.web_url_pull()` pulls data directly from here and stages in the `fraud_reports` table (this is an alternative approach to streaming the data in via dropping CSV's into a GCS bucket)
 + `./data/transactions/*` - use these g-zipped CSV files to load into ADLS (or an S3 / GCS bucket) and simulate streaming files into the pipeline.
 
 ## Job Configuration

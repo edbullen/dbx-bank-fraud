@@ -1,4 +1,13 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC # Fraud reports setup for V1 and V2 demo examples
+# MAGIC
+# MAGIC Use this notebook to stage fraud report data directly into the `fraud_reports` Delta table.
+# MAGIC   
+# MAGIC Do NOT use this notebook if running with the V3 demo version, where fraud report data is staged into a GCS bucket and streamed in with DLT.
+
+# COMMAND ----------
+
 # import the ETL functions
 from etl import data_load
 
