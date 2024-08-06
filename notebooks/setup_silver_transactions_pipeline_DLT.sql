@@ -59,6 +59,9 @@ SELECT t.* EXCEPT(countryOrig, countryDest, _rescued_data)  ,
 FROM STREAM(LIVE.transactions) t
 --LEFT JOIN ${catalog}.${schema}.fraud_reports f
 --  ON t.id = f.id
-LEFT JOIN live.fraud_reports f using(id)
+LEFT JOIN (
+  SELECT id, is_fraud 
+  FROM live.fraud_reports
+) f USING(id)
     
 
