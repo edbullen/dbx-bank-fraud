@@ -40,7 +40,7 @@ FROM
 -- Incremental tables are added to but don't update
 CREATE INCREMENTAL LIVE TABLE fraud_reports
 AS 
-  SELECT * FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
+  SELECT id, is_fraud  FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
 
 -- COMMAND ----------
 
