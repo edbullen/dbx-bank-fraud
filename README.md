@@ -34,11 +34,10 @@ Pre: Clone the git repo in the Workspace.
 5. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
 6. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
    + `transactions_raw`
-   + `fraud_raw`
+   + `fraud_raw` - only needed for the **V3** demo, for streaming Fraud Reports in with DLT
    + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
 7. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
-8a. **V1**, **V2**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
-8b. **V3**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_fraudtxns_pipeline_DLT.sql` as the pipeline Source code. 
+8. **V3 only**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
 9. Create the gold view using `./notebooks/setup_gold_transactions_view`
 
 

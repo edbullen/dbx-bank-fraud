@@ -47,13 +47,16 @@ dbutils.widgets.text(name="catalog", defaultValue='', label='field')
 dbutils.widgets.text("schema", defaultValue='', label='field')
 
 # Google Storage GS URL location - gs://<bucket>/<path>
-dbutils.widgets.text("txn_bucket_path", defaultValue='', label='field')
-dbutils.widgets.text("staging_bucket_path", defaultValue='', label='field')
+dbutils.widgets.text("txn_bucket_path", defaultValue='', label='field')  # for the transactions data streaming vol
+dbutils.widgets.text("frd_bucket_path", defaultValue='', label='field')  # for the fraud_reports streaming vol
+
+dbutils.widgets.text("staging_bucket_path", defaultValue='', label='field')  
 dbutils.widgets.text("refdata_bucket_path", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
 txn_bucket_path = dbutils.widgets.get("txn_bucket_path")
+frd_bucket_path = dbutils.widgets.get("frd_bucket_path")
 staging_bucket_path = dbutils.widgets.get("staging_bucket_path")
 refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 
@@ -79,3 +82,21 @@ refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 # MAGIC %sql
 # MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.staging
 # MAGIC LOCATION '${staging_bucket_path}';
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Set up the fraud_raw Volume
+# MAGIC Follow the same process for mapping the `fraud_reports` GCS folder to a volume called `fraud_raw` to ingest with Autoloader / DLT.
+# MAGIC
+# MAGIC + Create an External Data Storage Credential in Unity Catalog.  Note the SA email address.
+# MAGIC + grant access on the storage bucket that the UC volume will use to the Service Account assigned to the External Location (SA identified in previous step).  Need the `Storage Legacy Bucket Reader` and 
+# MAGIC `Storage Object Admin`
+# MAGIC + Create a new External Location in Unity Catalog called `fraud_raw`
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.fraud_raw
+# MAGIC LOCATION '${frd_bucket_path}';

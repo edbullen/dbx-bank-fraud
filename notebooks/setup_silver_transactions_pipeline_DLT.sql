@@ -37,8 +37,18 @@ FROM
 
 -- COMMAND ----------
 
+-- DBTITLE 1,DLT Incremental Stream Table for fraud reports
+-- Incremental tables are added to but don't update
+CREATE INCREMENTAL LIVE TABLE fraud_reports
+AS 
+  SELECT * FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
+
+-- COMMAND ----------
+
 -- DBTITLE 1,DLT Live Table for combined join of batched Delta Fraud Reports and Streamed Transactions
 CREATE OR REPLACE STREAMING TABLE silver_transactions
+  CONSTRAINT correct_data EXPECT (id IS NOT NULL),
+  CONSTRAINT correct_customer_id EXPECT (customer_id IS NOT NULL)
 AS
 SELECT t.* EXCEPT(countryOrig, countryDest)  , 
        f.is_fraud,
@@ -47,6 +57,8 @@ SELECT t.* EXCEPT(countryOrig, countryDest)  ,
          newBalanceOrig - oldBalanceOrig as diffOrig, 
          newBalanceDest - oldBalanceDest as diffDest
 FROM STREAM(LIVE.transactions) t
-LEFT JOIN ${catalog}.${schema}.fraud_reports f
-    ON t.id = f.id
+--LEFT JOIN ${catalog}.${schema}.fraud_reports f
+--  ON t.id = f.id
+LEFT JOIN live.fraud_reports f using(id)
+    
 
