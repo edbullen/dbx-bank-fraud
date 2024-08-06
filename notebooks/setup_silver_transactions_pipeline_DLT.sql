@@ -50,7 +50,7 @@ CREATE OR REPLACE STREAMING TABLE silver_transactions (
   CONSTRAINT correct_customer_id EXPECT (customer_id IS NOT NULL)
 )
 AS
-SELECT t.* EXCEPT(countryOrig, countryDest, _rescued_data)  , 
+SELECT t.* EXCEPT(countryOrig, countryDest)  , 
        f.is_fraud ,
          regexp_replace(countryOrig, "--", "") as countryOrig, 
          regexp_replace(countryDest, "--", "") as countryDest, 
