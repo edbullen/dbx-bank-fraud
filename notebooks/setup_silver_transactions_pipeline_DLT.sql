@@ -46,9 +46,10 @@ AS
 -- COMMAND ----------
 
 -- DBTITLE 1,DLT Live Table for combined join of batched Delta Fraud Reports and Streamed Transactions
-CREATE OR REPLACE STREAMING TABLE silver_transactions
+CREATE OR REPLACE STREAMING TABLE silver_transactions (
   CONSTRAINT correct_data EXPECT (id IS NOT NULL),
   CONSTRAINT correct_customer_id EXPECT (customer_id IS NOT NULL)
+)
 AS
 SELECT t.* EXCEPT(countryOrig, countryDest)  , 
        f.is_fraud,
