@@ -4,12 +4,11 @@
 -- MAGIC
 -- MAGIC + `silver_transactions` is created in the Unity Catalog location `<catalog>`.`<schema>`.  This is determined by the Catalog and Schema setting chosen when configuring the DLT pipeline.  Do not set it in the notebook.
 -- MAGIC + `<transactions_volume>` (the name is configurable) is sourced from Unity Catalog location `<source_catalog>`.`<source_schema>`  
--- MAGIC + Set the following configuration parameters in the DLT Advanced: Configuration section when creating the pipeline:
+-- MAGIC + **Set custom configuration parameters** in the DLT Advanced: Configuration section when creating the pipeline:
 -- MAGIC   - `catalog` 
--- MAGIC   -  `schema` 
--- MAGIC   - `transactions_volume`   
+-- MAGIC   -  `schema`  
 -- MAGIC + Data is read from the raw volume into table `transactions`
--- MAGIC + `transactions` is joined with `fraud_reports` which needs to be created in advance in `<catalog>`.`<schema>`   
+-- MAGIC + `transactions` is joined with `fraud_reports` which is also staged in a raw volume
 -- MAGIC
 -- MAGIC
 
@@ -52,7 +51,7 @@ CREATE OR REPLACE STREAMING TABLE silver_transactions (
 )
 AS
 SELECT t.* EXCEPT(countryOrig, countryDest)  , 
-       f.is_fraud,
+       f.is_fraud EXCEPT(_rescued_data),
          regexp_replace(countryOrig, "--", "") as countryOrig, 
          regexp_replace(countryDest, "--", "") as countryDest, 
          newBalanceOrig - oldBalanceOrig as diffOrig, 
