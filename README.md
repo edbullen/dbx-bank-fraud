@@ -108,5 +108,12 @@ Create the `gold_transactions` view using notebook `./notebooks/setup_gold_trans
 
 The view can be used for doing analytics, building dashboards or training ML models.  
 
-![Dashboard](./notebooks/images/dashboard_example.png)     
+![Dashboard](./notebooks/images/dashboard_example.png)  
+
+
+## Machine Learning and MLflow
+
+1. Train a model with multiple training runs in an MLflow experiment using the `./notebooks/fraud_model_training.py` notebook
+2. Deploy the best performing model from the MLFlow experiments to Unity Catalog using the  `./notebooks/fraud_model_deploy.py` notebook.
+3. Run a batch set of predictions using the model registered in Unity Catalog and store the results using the `./notebooks/fraud_model_run.py` notebook
 
