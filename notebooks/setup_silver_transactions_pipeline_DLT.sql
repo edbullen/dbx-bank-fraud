@@ -23,7 +23,8 @@
 -- DBTITLE 1,DLT Streaming Table for landing transactions
 CREATE OR REFRESH STREAMING TABLE transactions
 AS SELECT
-  *
+  *,
+  input_file_name() AS source_file
 FROM
   STREAM cloud_files(
     "/Volumes/${catalog}/${schema}/transactions_raw",
@@ -40,7 +41,8 @@ FROM
 -- Incremental tables are added to but don't update
 CREATE INCREMENTAL LIVE TABLE fraud_reports
 AS 
-  SELECT id, is_fraud  FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
+  SELECT id, is_fraud, input_file_name() AS source_file
+  FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
 
 -- COMMAND ----------
 
