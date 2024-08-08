@@ -24,7 +24,7 @@
 CREATE OR REFRESH STREAMING TABLE transactions
 AS SELECT
   *,
-  input_file_name() AS source_file
+  _metadata.file_path AS source_file
 FROM
   STREAM cloud_files(
     "/Volumes/${catalog}/${schema}/transactions_raw",
@@ -41,7 +41,7 @@ FROM
 -- Incremental tables are added to but don't update
 CREATE INCREMENTAL LIVE TABLE fraud_reports
 AS 
-  SELECT id, is_fraud, input_file_name() AS source_file
+  SELECT id, is_fraud, _metadata.file_path AS source_file
   FROM cloud_files("/Volumes/${catalog}/${schema}/fraud_raw", "csv")
 
 -- COMMAND ----------

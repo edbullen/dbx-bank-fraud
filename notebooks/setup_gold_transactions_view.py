@@ -46,3 +46,13 @@ dbutils.widgets.text("reference_schema", defaultValue='', label='field')
 # MAGIC
 # MAGIC
 # MAGIC
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+# MAGIC %environment
+# MAGIC "client": "1"
+# MAGIC "base_environment": ""
