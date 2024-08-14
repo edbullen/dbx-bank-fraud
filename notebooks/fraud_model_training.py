@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # MLflow Model Training
 # MAGIC
-# MAGIC ![Train-Test-Diag](https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/notebooks/images/mlflow_lifecycle.png)
+# MAGIC ![Train-Test-Diag](https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/notebooks/images/ml-diagram-model-development-deployment.png)
 # MAGIC
 
 # COMMAND ----------
