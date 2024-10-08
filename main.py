@@ -1,4 +1,4 @@
-
+import argparse
 
 from databricks.connect.session import DatabricksSession as SparkSession
 
@@ -52,18 +52,34 @@ if __name__ == '__main__':
 
     status = test_module.return_true()
     if status:
-        print("Test Module ran with: Success")
+        print("Test Connect Module ran with: Success")
     else:
-        print("Test Module ran with: Failure")
+        print("Test Connect Module ran with: Failure")
 
-    run_file_loader("hsbc", "hr", source_folder="bank_transactions", target_table="transactions", format_type="csv")
+    # process command-line arguments to set the Unity Catalog and Schema
+    parser = argparse.ArgumentParser(description="specify the Unity catalog and schema",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-c', dest='catalog', action='store', help='Unity Catalog Name', required=True)
+    parser.add_argument('-s', dest='schema', action='store', help='Unity Schema NAme', required=True)
+    args = vars(parser.parse_args())
 
-    run_fraud_loader("hsbc", "hr"
+    # get the gold_transactions data in a data-frame and count it.
+    gold_df = data_load.gold_transactions(spark, args['catalog'], args['schema'], 'RUS')
+    print(gold_df.count(), 'gold transactions count')
+
+
+
+
+    # old examples
+    """
+    run_file_loader("catalog", "schema", source_folder="bank_transactions", target_table="transactions", format_type="csv")
+
+    run_fraud_loader("catalog", "schema"
                      , url="https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/data/fraud_reports/fraud_reports_part_b.csv"
                      , target_table="fraud_reports"
                      , format_type="csv"
                      , columns=["is_fraud", "id"])
 
-    run_silver_load("hsbc", "hr")
-
+    run_silver_load("", "")
+    """
 

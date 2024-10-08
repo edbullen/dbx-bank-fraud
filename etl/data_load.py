@@ -95,3 +95,19 @@ def load_silver_transactions(spark, catalog, schema,
     """
     )
 
+
+def gold_transactions(spark: SparkSession, source_catalog: str, source_schema: str, country: str = None) -> DataFrame:
+    """ return a spark dataframe from the gold transactions table, optionally filter by country
+    :param: SparkSession
+    :param: catalog
+    :param: schema
+    :param: country - optional filter by three-letter country code EG RUS, USA etc
+    :returns: Spark DataFrame
+    """
+
+    result = spark.table(f"{source_catalog}.{source_schema}.gold_transactions")
+    if country:
+        return result.filter(result["country"] == country)
+    else:
+        return result
+
