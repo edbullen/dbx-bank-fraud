@@ -10,6 +10,8 @@
 -- MAGIC + Data is read from the raw volume into table `transactions`
 -- MAGIC + `transactions` is joined with `fraud_reports` which is also staged in a raw volume
 -- MAGIC
+-- MAGIC    
+-- MAGIC See [README_DLT.md](../README_DLT.md) for a guide on adding this DLT workflow using the web GUI.
 -- MAGIC
 
 -- COMMAND ----------
@@ -67,9 +69,3 @@ LEFT JOIN (
 ) f USING(id)
     
 
-
--- COMMAND ----------
-
--- MAGIC %environment
--- MAGIC "client": "1"
--- MAGIC "base_environment": ""

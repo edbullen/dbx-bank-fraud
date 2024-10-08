@@ -64,7 +64,8 @@ transactions_df = spark.sql("""SELECT id,
                               WHEN is_fraud = "true" THEN 1
                               ELSE 'NaN'
                             END as is_fraud
-                            FROM gold_transactions LIMIT 100000""")
+                            FROM hsbc.fraud_features.fraud_training_1""")
+#FROM gold_transactions LIMIT 100000""")
 
 # COMMAND ----------
 

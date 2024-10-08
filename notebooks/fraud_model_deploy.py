@@ -78,7 +78,3 @@ model_registered = mlflow.register_model("runs:/"+best_model.run_id+"/model", mo
 # MAGIC You can reference and target model versions using these aliases in downstream inference workflows.
 # MAGIC
 # MAGIC Set the Alias in the Unity Catalog browser.
-
-# COMMAND ----------
-
-

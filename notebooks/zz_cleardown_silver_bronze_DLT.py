@@ -9,6 +9,20 @@ spark.sql(f"USE {unity_catalog}.{unity_schema}")
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## DLT Pipeline Cleardown
+# MAGIC
+# MAGIC + `silver_transactions` 
+# MAGIC + `fraud_reports`  
+# MAGIC + `transactions`  
+# MAGIC For DLT, just delete the FSI Fraud DLT workflow in the *Workflows* -> *Delta Live Tables* GUI.  
+# MAGIC
+# MAGIC This will clear down all the associated streaming tables, data, and cloud-files checkpoint 
+# MAGIC
+# MAGIC state.
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC DROP TABLE silver_transactions;
 
