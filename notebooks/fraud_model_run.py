@@ -4,6 +4,7 @@
 
 # COMMAND ----------
 
+# DBTITLE 1,Setup which schema we are working in
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
 unity_catalog = dbutils.widgets.get("unity_catalog")
@@ -14,7 +15,9 @@ spark.sql(f"USE {unity_catalog}.{unity_schema}")
 
 # COMMAND ----------
 
+# DBTITLE 1,Demo Environment Setup
 # set some vars to generate names for where we store our experiments and feature data for demonstration purposes
+
 import re
 current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
 if current_user.rfind('@') > 0:
@@ -28,6 +31,7 @@ print(f"current_user var set to {current_user}")
 experiment_name = f"/Users/{current_user}/bank_fraud_experiment"
 
 print(f"MLFlow Experiment name is {experiment_name}")
+
 
 # COMMAND ----------
 
@@ -63,6 +67,7 @@ transactions_df = spark.sql("""SELECT id,
 
 # COMMAND ----------
 
+# DBTITLE 1,Create a predicted data frame with is_fraud col
 # Use the Spark function withColumn() to apply the PySpark UDF to the DataFrame and return a new DataFrame with a prediction column.
 from pyspark.sql.functions import struct, col
 
@@ -91,11 +96,5 @@ spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions
 
 # COMMAND ----------
 
-# Update the target table lineage with MLflow information
-spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions  
-          SET TBLPROPERTIES ('mlflow_experiment_name'='{experiment_name}', 'mlflow_model_uri'='{model_version_uri}')""")
-
-
-# COMMAND ----------
-
-
+# DBTITLE 1,Write the Data out to CSV in a Unity Catalog volume called output
+predicted_df.coalesce(1).write.mode('overwrite').option('header', 'true').csv(f"/Volumes/{unity_catalog}/{unity_schema}/output/fraud_predictions")

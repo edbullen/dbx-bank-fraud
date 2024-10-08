@@ -1,6 +1,6 @@
 select countryOrig , countryDest , type, value from (
     select countryOrig , countryDest , type, count(amount ) as value
-    from gold_transactions
+    from hsbc.fraud.gold_transactions
     where amount > 350000
     group by countryOrig , countryDest ,type
 ) order by value desc
