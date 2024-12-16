@@ -50,14 +50,14 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 dbutils.widgets.text("txn_bucket_path", defaultValue='', label='field')  # for the transactions data streaming vol
 dbutils.widgets.text("frd_bucket_path", defaultValue='', label='field')  # for the fraud_reports streaming vol
 
-dbutils.widgets.text("staging_bucket_path", defaultValue='', label='field')  
+#dbutils.widgets.text("staging_bucket_path", defaultValue='', label='field')  
 dbutils.widgets.text("refdata_bucket_path", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")
 txn_bucket_path = dbutils.widgets.get("txn_bucket_path")
 frd_bucket_path = dbutils.widgets.get("frd_bucket_path")
-staging_bucket_path = dbutils.widgets.get("staging_bucket_path")
+#staging_bucket_path = dbutils.widgets.get("staging_bucket_path")
 refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 
 # COMMAND ----------
@@ -81,7 +81,7 @@ refdata_bucket_path = dbutils.widgets.get("refdata_bucket_path")
 
 # MAGIC %sql
 # MAGIC CREATE EXTERNAL VOLUME ${catalog}.${schema}.staging
-# MAGIC LOCATION '${staging_bucket_path}';
+# MAGIC LOCATION '${refdata_bucket_path}';
 
 # COMMAND ----------
 
