@@ -52,6 +52,7 @@ AS
 CREATE OR REPLACE STREAMING TABLE silver_transactions (
   CONSTRAINT correct_data EXPECT (id IS NOT NULL),
   CONSTRAINT correct_customer_id EXPECT (customer_id IS NOT NULL)
+  CONSTRAINT correct_amount EXPECT (amount > 0) ON VIOLATION DROP ROW
 )
 AS
 SELECT t.* EXCEPT(countryOrig, countryDest)  , 
