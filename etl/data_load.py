@@ -85,8 +85,8 @@ def load_silver_transactions(spark, catalog, schema,
     USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data), 
          regexp_replace(countryOrig, "--", "") as countryOrig, 
          regexp_replace(countryDest, "--", "") as countryDest, 
-         to_number(newBalanceOrig, '99999999.99') - to_number(oldBalanceOrig, '99999999.99') as diffOrig, 
-         to_number(newBalanceDest, '99999999.99') - to_number(oldBalanceDest, '99999999.99') as diffDest
+         to_number(newBalanceOrig, 'S99999999.99') - to_number(oldBalanceOrig, 'S99999999.99') as diffOrig, 
+         to_number(newBalanceDest, 'S99999999.99') - to_number(oldBalanceDest, 'S99999999.99') as diffDest
          FROM {source_catalog}.{source_schema}.{source_table} t
         LEFT JOIN  {catalog}.{schema}.fraud_reports f USING(id)) as source
     ON source.id = target.id
