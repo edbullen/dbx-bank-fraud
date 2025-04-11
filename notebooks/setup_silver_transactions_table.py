@@ -29,6 +29,10 @@ transactions_table = dbutils.widgets.get("transactions_table")
 
 # COMMAND ----------
 
+catalog="bank"
+
+# COMMAND ----------
+
 table_name = f"{catalog}.{schema}.{transactions_table}"
 print(table_name)
 
@@ -40,8 +44,8 @@ print(table_name)
 # MAGIC   SELECT * EXCEPT(countryOrig, countryDest, t._rescued_data), 
 # MAGIC           regexp_replace(countryOrig, "\-\-", "") as countryOrig, 
 # MAGIC           regexp_replace(countryDest, "\-\-", "") as countryDest, 
-# MAGIC           newBalanceOrig - oldBalanceOrig as diffOrig, 
-# MAGIC           newBalanceDest - oldBalanceDest as diffDest
+# MAGIC           to_number(newBalanceOrig, '999999.99') - to_number(oldBalanceOrig, '999999.99') as diffOrig, 
+# MAGIC           to_number(newBalanceDest, '999999.99') - to_number(oldBalanceDest, '999999.99') as diffDest
 # MAGIC FROM ${source_catalog}.${source_schema}.${transactions_table} t
 # MAGIC   LEFT JOIN ${catalog}.${schema}.fraud_reports f using(id)
 # MAGIC WHERE 1 = 0;

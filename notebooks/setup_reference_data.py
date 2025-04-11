@@ -48,8 +48,8 @@ schema = dbutils.widgets.get("schema")
 # MAGIC %sql
 # MAGIC SELECT * 
 # MAGIC FROM read_files(
-# MAGIC   '/Volumes/${catalog}/${schema}/staging/customers_json',
-# MAGIC   format => 'text')
+# MAGIC   '/Volumes/${catalog}/${schema}/staging/country_coordinates',
+# MAGIC   format => 'csv')
 # MAGIC
 
 # COMMAND ----------
@@ -59,5 +59,15 @@ schema = dbutils.widgets.get("schema")
 # MAGIC AS 
 # MAGIC SELECT * EXCEPT (_rescued_data)
 # MAGIC FROM read_files(
-# MAGIC   '/Volumes/${catalog}/${schema}/staging/customers_json',
-# MAGIC   format => 'json')
+# MAGIC   '/Volumes/${catalog}/${schema}/staging/banking_customers/banking_customers.csv',
+# MAGIC   format => 'csv')
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE OR REPLACE TABLE ${catalog}.${schema}.banking_customers
+# MAGIC AS 
+# MAGIC SELECT * EXCEPT (_rescued_data)
+# MAGIC FROM read_files(
+# MAGIC '/Volumes/${catalog}/${schema}/staging/banking_customers',
+# MAGIC format => 'json')
