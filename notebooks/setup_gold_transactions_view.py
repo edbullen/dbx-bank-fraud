@@ -24,14 +24,15 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 # MAGIC
 # MAGIC CREATE OR REPLACE VIEW gold_transactions 
 # MAGIC AS 
-# MAGIC   SELECT t.* EXCEPT(countryOrig, countryDest, is_fraud), c.* EXCEPT(id),
+# MAGIC   SELECT t.* EXCEPT(amount, countryOrig, countryDest, is_fraud), c.* EXCEPT(id),
 # MAGIC           boolean(coalesce(is_fraud, 0)) as is_fraud,
+# MAGIC           CAST(t.amount AS DOUBLE) as amount,
 # MAGIC           o.alpha3_code as countryOrig, o.country as countryOrig_name, o.long_avg as countryLongOrig_long, o.lat_avg as countryLatOrig_lat,
 # MAGIC           d.alpha3_code as countryDest, d.country as countryDest_name, d.long_avg as countryLongDest_long, d.lat_avg as countryLatDest_lat
 # MAGIC FROM silver_transactions t
 # MAGIC   INNER JOIN country_coordinates o ON t.countryOrig=o.alpha3_code 
 # MAGIC   INNER JOIN country_coordinates d ON t.countryDest=d.alpha3_code 
-# MAGIC   INNER JOIN banking_customers c ON c.id=t.customer_id 
+# MAGIC   INNER JOIN banking_customers c ON c.id=t.customer_id
 
 # COMMAND ----------
 
@@ -46,7 +47,3 @@ dbutils.widgets.text("schema", defaultValue='', label='field')
 # MAGIC
 # MAGIC
 # MAGIC
-
-# COMMAND ----------
-
-
