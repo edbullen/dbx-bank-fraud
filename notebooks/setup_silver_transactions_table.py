@@ -29,12 +29,10 @@ transactions_table = dbutils.widgets.get("transactions_table")
 
 # COMMAND ----------
 
-catalog="bank"
-
-# COMMAND ----------
-
 table_name = f"{catalog}.{schema}.{transactions_table}"
 print(table_name)
+print(f"source_catalog: {source_catalog}")
+print(f"catalog: {catalog}")
 
 # COMMAND ----------
 

@@ -24,7 +24,8 @@ def auto_loader(spark, catalog, schema, source_folder, target_table, format_type
     table_name = f"{catalog}.{schema}.{target_table}"
 
     # username = spark.sql("SELECT regexp_replace(current_user(), '[^a-zA-Z0-9]', '_')").first()[0]
-    checkpoint_path = f"/tmp/{catalog}/{schema}/{source_folder}/_checkpoint/"
+    #checkpoint_path = f"/tmp/{catalog}/{schema}/{source_folder}/_checkpoint/"
+    checkpoint_path = f"/Volumes/{catalog}/{schema}/{source_folder}/_checkpoint/"
 
     # Configure Auto Loader to ingest CSV data to a Delta table
     (spark.readStream

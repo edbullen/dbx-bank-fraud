@@ -30,3 +30,12 @@ data_load.auto_loader(spark
                      , source_folder=source_folder
                      , target_table=target_table
                      , format_type=format_type)
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC show volumes
