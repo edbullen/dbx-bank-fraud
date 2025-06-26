@@ -4,6 +4,8 @@
 
 # COMMAND ----------
 
+# Databricks notebook source
+
 # import the ETL functions
 from etl import data_load
 
