@@ -39,6 +39,33 @@ def auto_loader(spark, catalog, schema, source_folder, target_table, format_type
      .option("checkpointLocation", checkpoint_path)
      .trigger(availableNow=True)
      .toTable(table_name))
+    
+
+def transactions_load(spark, catalog, schema, source_folder, target_table, format_type="csv"):
+    """ load raw file-data from a Unity Catalog Volume location and write to Delta Table.  
+    Job needs to read new data only.
+
+    :param spark     SparkSession
+    :param catalog   String - Unity catalog location for input file and output table
+    :param schema    String - Unity schema location for input file and output table
+    :param source_folder String - folder / directory name in which input file is located
+    :param target_table  String - name of output tablr
+    :param format_type   String - input file format (CSV or JSON)
+
+    """
+    source_path = f"/Volumes/{catalog}/{schema}/{source_folder}/"
+    checkpoint_path = f"/Volumes/{catalog}/{schema}/_checkpoints/{target_table}/"
+
+    (spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", format_type)
+        .option("cloudFiles.includeExistingFiles", "false")
+        .load(source_path)
+        .writeStream
+        .option("checkpointLocation", checkpoint_path)
+        .trigger(availableNow=True)
+        .toTable(f"{catalog}.{schema}.{target_table}")
+    )
 
 
 def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", columns=None):
