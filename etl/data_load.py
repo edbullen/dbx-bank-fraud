@@ -64,6 +64,7 @@ def transactions_load(spark, catalog, schema, source_folder, target_table, forma
         .option("cloudFiles.includeExistingFiles", "false")
         .option("cloudFiles.schemaLocation", schema_location)
         .load(source_path)
+        .select("*", col("_metadata.file_path").alias("source_file"), current_timestamp().alias("processing_time"))
         .writeStream
         .option("checkpointLocation", checkpoint_path)
         .trigger(availableNow=True)
