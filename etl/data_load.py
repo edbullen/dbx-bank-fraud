@@ -55,11 +55,14 @@ def transactions_load(spark, catalog, schema, source_folder, target_table, forma
     """
     source_path = f"/Volumes/{catalog}/{schema}/{source_folder}/"
     checkpoint_path = f"/Volumes/{catalog}/{schema}/_checkpoints/{target_table}/"
+    schema_location = f"/Volumes/{catalog}/{schema}/_schema/{target_table}/"
+
 
     (spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", format_type)
         .option("cloudFiles.includeExistingFiles", "false")
+        .option("cloudFiles.schemaLocation", schema_location)
         .load(source_path)
         .writeStream
         .option("checkpointLocation", checkpoint_path)
