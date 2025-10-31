@@ -108,23 +108,23 @@ def load_silver_transactions(spark, catalog, schema,
     if source_schema is None:
         source_schema = schema
 
-spark.sql(f"""
-MERGE INTO {catalog}.{schema}.{target_table} as target
-USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data, newBalanceOrig, oldBalanceOrig, newBalanceDest, oldBalanceDest), 
-     regexp_replace(countryOrig, "--", "") as countryOrig, 
-     regexp_replace(countryDest, "--", "") as countryDest,
-     CAST(newBalanceOrig AS DOUBLE) as newBalanceOrig,
-     CAST(oldBalanceOrig AS DOUBLE) as oldBalanceOrig,
-     CAST(newBalanceDest AS DOUBLE) as newBalanceDest,
-     CAST(oldBalanceDest AS DOUBLE) as oldBalanceDest,
-     CAST(newBalanceOrig AS DOUBLE) - CAST(oldBalanceOrig AS DOUBLE) as diffOrig, 
-     CAST(newBalanceDest AS DOUBLE) - CAST(oldBalanceDest AS DOUBLE) as diffDest
-     FROM {source_catalog}.{source_schema}.{source_table} t
-    LEFT JOIN  {catalog}.{schema}.fraud_reports f USING(id)) as source
-ON source.id = target.id
-WHEN NOT MATCHED
-  THEN INSERT *
-""")
+    spark.sql(f"""
+    MERGE INTO {catalog}.{schema}.{target_table} as target
+    USING (SELECT f.is_fraud, t.* EXCEPT(countryOrig, countryDest, t._rescued_data, newBalanceOrig, oldBalanceOrig, newBalanceDest, oldBalanceDest), 
+        regexp_replace(countryOrig, "--", "") as countryOrig, 
+        regexp_replace(countryDest, "--", "") as countryDest,
+        CAST(newBalanceOrig AS DOUBLE) as newBalanceOrig,
+        CAST(oldBalanceOrig AS DOUBLE) as oldBalanceOrig,
+        CAST(newBalanceDest AS DOUBLE) as newBalanceDest,
+        CAST(oldBalanceDest AS DOUBLE) as oldBalanceDest,
+        CAST(newBalanceOrig AS DOUBLE) - CAST(oldBalanceOrig AS DOUBLE) as diffOrig, 
+        CAST(newBalanceDest AS DOUBLE) - CAST(oldBalanceDest AS DOUBLE) as diffDest
+        FROM {source_catalog}.{source_schema}.{source_table} t
+        LEFT JOIN  {catalog}.{schema}.fraud_reports f USING(id)) as source
+    ON source.id = target.id
+    WHEN NOT MATCHED
+    THEN INSERT *
+    """)
 
 
 def gold_transactions(spark: SparkSession, source_catalog: str, source_schema: str, country: str = None) -> DataFrame:
