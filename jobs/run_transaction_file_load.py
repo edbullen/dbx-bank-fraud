@@ -4,7 +4,6 @@
 
 # COMMAND ----------
 
-# Databricks notebook source
 
 # import the ETL functions
 from etl import data_load
@@ -26,24 +25,7 @@ autoloader = dbutils.widgets.get("autoloader").lower()
 
 # COMMAND ----------
 
-<<<<<<< Updated upstream
-# run autoloader job to check for new files
-data_load.auto_loader(spark
-                     , catalog=catalog
-                     , schema=schema
-                     , source_folder=source_folder
-                     , target_table=target_table
-                     , format_type=format_type)
 
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC show volumes
-=======
 if autoloader == 'true':
   # run autoloader job to check for new files
   data_load.auto_loader(spark
@@ -60,4 +42,4 @@ else:
                       , source_folder=source_folder
                       , target_table=target_table
                       , format_type=format_type)
->>>>>>> Stashed changes
+
