@@ -9,7 +9,6 @@
 # COMMAND ----------
 
 # DBTITLE 1,Specify the source schema for building the Silver table in the Target schema
-
 # Depending on whether this is working on the Azure ADLS source demo or the Big Query demo - set this to transactions or bronze_transactions
 dbutils.widgets.text("transactions_table", defaultValue='', label='field')
 
@@ -19,13 +18,12 @@ dbutils.widgets.text(name="source_catalog", defaultValue='', label='field')
 dbutils.widgets.text("source_schema", defaultValue='', label='field')
 
 catalog = dbutils.widgets.get("catalog")
-schema = catalog = dbutils.widgets.get("schema")
+schema = dbutils.widgets.get("schema")
 
 source_catalog = dbutils.widgets.get("source_catalog")
-source_schema = catalog = dbutils.widgets.get("source_schema")
+source_schema = dbutils.widgets.get("source_schema")
 
 transactions_table = dbutils.widgets.get("transactions_table")
-
 
 # COMMAND ----------
 
@@ -37,16 +35,18 @@ print(f"catalog: {catalog}")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${catalog}.${schema}.silver_transactions 
+# MAGIC DROP TABLE IF EXISTS ${catalog}.${schema}.silver_transactions;
+# MAGIC
+# MAGIC CREATE TABLE ${catalog}.${schema}.silver_transactions 
 # MAGIC AS 
 # MAGIC   SELECT * EXCEPT(countryOrig, countryDest, t._rescued_data), 
 # MAGIC           regexp_replace(countryOrig, "\-\-", "") as countryOrig, 
 # MAGIC           regexp_replace(countryDest, "\-\-", "") as countryDest, 
-# MAGIC           to_number(newBalanceOrig, '999999.99') - to_number(oldBalanceOrig, '999999.99') as diffOrig, 
-# MAGIC           to_number(newBalanceDest, '999999.99') - to_number(oldBalanceDest, '999999.99') as diffDest
+# MAGIC           cast(newBalanceOrig as double) - cast(oldBalanceOrig as double) as diffOrig, 
+# MAGIC           cast(newBalanceDest as double) - cast(oldBalanceDest as double) as diffDest
 # MAGIC FROM ${source_catalog}.${source_schema}.${transactions_table} t
 # MAGIC   LEFT JOIN ${catalog}.${schema}.fraud_reports f using(id)
-# MAGIC WHERE 1 = 0;
+# MAGIC --WHERE 1 = 0;
 
 # COMMAND ----------
 
