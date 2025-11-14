@@ -4,9 +4,14 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,Set the Default Catalog and Schema
+# DBTITLE 1,Configure Widgets for Unity Catalog schema
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
+
+# COMMAND ----------
+
+# DBTITLE 1,Set the Default Catalog and Schema
+
 unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
@@ -18,7 +23,7 @@ spark.sql(f"USE {unity_catalog}.{unity_schema}")
 # DBTITLE 1,Local Vars to pick up MLflow Experiment location
 # set some vars to generate names for where we store our experiments and feature data for demonstration purposes
 import re
-current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
+current_user = spark.sql("SELECT current_user()").collect()[0][0]
 if current_user.rfind('@') > 0:
   current_user_no_at = current_user[:current_user.rfind('@')]
 else:
