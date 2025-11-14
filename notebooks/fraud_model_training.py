@@ -4,12 +4,21 @@
 # MAGIC
 # MAGIC ![Train-Test-Diag](https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/notebooks/images/ml-diagram-model-development-deployment.png)
 # MAGIC
+# MAGIC
+# MAGIC ## Training Environment
+# MAGIC
+# MAGIC This notebook is tested running on a **Classic** (non-serverless) **ML runtime 16.4LTS** cluster.
+# MAGIC
 
 # COMMAND ----------
 
-# DBTITLE 1,Set the default schema and catalog
+# DBTITLE 1,Create notebook widgets for setting the catalog and schema
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
+
+# COMMAND ----------
+
+# DBTITLE 1,Set the working schema and catalog
 unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
@@ -21,7 +30,7 @@ spark.sql(f"USE {unity_catalog}.{unity_schema}")
 # DBTITLE 1,Set a user-name to identify this experiment with
 # set some vars to generate names for where we store our experiments and feature data for demonstration purposes
 import re
-current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
+current_user = spark.sql("SELECT current_user()").collect()[0][0]
 if current_user.rfind('@') > 0:
   current_user_no_at = current_user[:current_user.rfind('@')]
 else:
@@ -46,11 +55,13 @@ model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 # COMMAND ----------
 
 # DBTITLE 1,Load Data
-# load from the gold transactions view - only pick a subset of columns for a simple demonstration
-# we want numeric data for our ML model - can't do this directly in the query for categorical features (do this later with OHE)
+# load from the gold transactions view.  This could be a separate Features table tracked in Unity Catalog
+#  - only pick a subset of columns for a simple demonstration
+# we want numeric data for our ML model 
+# - can't do this directly in the query for categorical features (do this later with OHE)
 
 # One of the requirements for a Feature table is a Primary Key - id in this example.
-transactions_df = spark.sql("""SELECT id,
+transactions_df = spark.sql(f"""SELECT id,
                             CAST(amount as FLOAT),
                             CAST(isUnauthorizedOverdraft as FLOAT),
                             CAST(newBalanceDest as FLOAT),
@@ -64,12 +75,12 @@ transactions_df = spark.sql("""SELECT id,
                               WHEN is_fraud = "true" THEN 1
                               ELSE 'NaN'
                             END as is_fraud
-                            FROM hsbc.fraud_features.fraud_training_1""")
-#FROM gold_transactions LIMIT 100000""")
+                            FROM {unity_catalog}.{unity_schema}.gold_transactions""")
+
 
 # COMMAND ----------
 
-
+display(transactions_df.limit(10))
 
 # COMMAND ----------
 
@@ -77,15 +88,6 @@ transactions_df = spark.sql("""SELECT id,
 # cast is_fraud to a float; if there was any bad data, we will get an error
 from pyspark.sql.types import IntegerType, FloatType
 transactions_df = transactions_df.select(transactions_df['*']).withColumn("label", transactions_df["is_fraud"].cast(FloatType())).drop('is_fraud')
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
 
 # COMMAND ----------
 
@@ -99,14 +101,15 @@ print(sys.getsizeof(transactions_pd))
 
 # COMMAND ----------
 
+# DBTITLE 1,Log the lineage of the data-set used for training
+# purely for metadata tracking and lineage purposes 
+# - records information about the source dataset (schema, source location, digest) 
+# - doesn't contain the actual data in a format suitable for scikit-learn operations like train_test_split().
 mlflow_data = mlflow.data.from_spark(transactions_df)
 
 # COMMAND ----------
 
-transactions_pd.head()
-
-# COMMAND ----------
-
+# DBTITLE 1,Show the ratio of Not-Fraud/Fraud
 transactions_pd.groupby(['label']).count()
 
 # COMMAND ----------
@@ -159,7 +162,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
 # import utils for determining model performance / accuracy
 from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 
 # Preprocessing for categorical data
 categorical_transformer = Pipeline(steps=[
@@ -237,14 +240,17 @@ for estimators in estimators_list:
       prec = precision_score(y_test, y_pred)*100
       rec = recall_score(y_test, y_pred)*100
       f1 = f1_score(y_test, y_pred)*100
+      auc = roc_auc_score(y_test, y_pred)*100
 
       #print(f"Accuracy: {accuracy} Precision: {prec} Recall: {rec} F1 Score: {f1}")
 
       # explicitly log metrics in MLflow (many metrics are auto-logged anyway)
       mlflow.log_metric('accuracy', accuracy)
       mlflow.log_metric('f1_score', f1)
+      mlflow.log_param('auc_score', auc)
       mlflow.log_param('max_depth', depth)
       mlflow.log_param('n_estimators', estimators)
+     
 
       # Record a confusion matrix plot for the model test results
       fig, ax = plt.subplots(figsize=(6, 6))  # set dimensions of the plot
