@@ -4,9 +4,13 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,Setup which schema we are working in
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
+
+# COMMAND ----------
+
+# DBTITLE 1,Setup which schema we are working in
+
 unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
