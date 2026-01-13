@@ -4,6 +4,11 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install --force-reinstall mlflow[databricks]
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
 # DBTITLE 1,Configure Widgets for Unity Catalog schema
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")

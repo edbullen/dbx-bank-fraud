@@ -12,6 +12,11 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install mlflow
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
 # DBTITLE 1,Create notebook widgets for setting the catalog and schema
 dbutils.widgets.text("unity_catalog", "default_catalog", "Unity Catalog")
 dbutils.widgets.text("unity_schema", "default_schema", "Unity Schema")
@@ -61,21 +66,50 @@ model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 # - can't do this directly in the query for categorical features (do this later with OHE)
 
 # One of the requirements for a Feature table is a Primary Key - id in this example.
-transactions_df = spark.sql(f"""SELECT id,
-                            CAST(amount as FLOAT),
-                            CAST(isUnauthorizedOverdraft as FLOAT),
-                            CAST(newBalanceDest as FLOAT),
-                            CAST(oldBalanceDest as FLOAT),
-                            CAST(diffOrig as FLOAT),
-                            CAST(diffDest as FLOAT),
-                            countryOrig_name,
-                            countryDest_name,
-                            CASE 
-                              WHEN is_fraud = 'false' THEN 0
-                              WHEN is_fraud = "true" THEN 1
-                              ELSE 'NaN'
-                            END as is_fraud
-                            FROM {unity_catalog}.{unity_schema}.gold_transactions""")
+#transactions_df = spark.sql(f"""SELECT id,
+#                            CAST(amount as FLOAT),
+#                            CAST(newBalanceDest as FLOAT),
+#                            CAST(oldBalanceDest as FLOAT),
+#                            CAST(diffOrig as FLOAT),
+#                            CAST(diffDest as FLOAT),
+#                            countryOrig_name,
+#                            countryDest_name,
+#                            type,
+#                            CASE 
+#                              WHEN is_fraud = 'false' THEN 0
+#                              WHEN is_fraud = "true" THEN 1
+#                              ELSE 'NaN'
+#                            END as is_fraud
+#                            FROM {unity_catalog}.{unity_schema}.gold_transactions""")
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Load Data
+import mlflow
+
+table_fqn = f"{unity_catalog}.{unity_schema}.gold_transactions"
+
+# Create an MLflow SparkDataset whose source is the UC Delta table
+train_ds = mlflow.data.load_delta(table_name=table_fqn)   # SparkDataset
+base_df = train_ds.df                                     # Spark DataFrame
+
+# Keep the existing projection logic (Spark-side)
+transactions_df = base_df.selectExpr(
+    "id",
+    "CAST(amount as FLOAT) as amount",
+    "CAST(newBalanceDest as FLOAT) as newBalanceDest",
+    "CAST(oldBalanceDest as FLOAT) as oldBalanceDest",
+    "CAST(diffOrig as FLOAT) as diffOrig",
+    "CAST(diffDest as FLOAT) as diffDest",
+    "countryOrig_name",
+    "countryDest_name",
+    "type",
+    "CASE WHEN is_fraud = 'false' THEN 0 WHEN is_fraud = 'true' THEN 1 ELSE NULL END as is_fraud"
+)
+
+# Then convert to pandas for easy SciKit Learn operations (its only a small dataset)
+transactions_pd = transactions_df.toPandas()
 
 
 # COMMAND ----------
@@ -98,14 +132,6 @@ import sys
 
 transactions_pd = transactions_df.toPandas()
 print(sys.getsizeof(transactions_pd))
-
-# COMMAND ----------
-
-# DBTITLE 1,Log the lineage of the data-set used for training
-# purely for metadata tracking and lineage purposes 
-# - records information about the source dataset (schema, source location, digest) 
-# - doesn't contain the actual data in a format suitable for scikit-learn operations like train_test_split().
-mlflow_data = mlflow.data.from_spark(transactions_df)
 
 # COMMAND ----------
 
@@ -133,7 +159,7 @@ X = transactions_pd.drop(['id', 'label'], axis =1 )
 X_train_full, X_test_full, y_train, y_test = train_test_split(X, y, train_size=0.8, test_size=0.2, random_state=0)
 
 # list of feature cols - categerical need one hot encoding, numeric need to have missing vals filled
-categorical_cols = ["isUnauthorizedOverdraft", "countryOrig_name", "countryDest_name" ]
+categorical_cols = ["type", "countryOrig_name", "countryDest_name" ]
 numeric_cols = ["amount", "newBalanceDest", "oldBalanceDest", "diffOrig", "diffDest"]  
 
 # Keep selected columns only
@@ -214,7 +240,9 @@ for estimators in estimators_list:
     with mlflow.start_run(run_name=f'bank_fraud_{estimators}_{run_timestamp}'):
 
       mlflow.sklearn.autolog()
-      mlflow.log_input(mlflow_data, "training")
+
+      # log the data lineage of the training dataset for this model
+      mlflow.log_input(train_ds, context="training")
 
       # Set a tag so we can find this group of experiment runs
       mlflow.set_tag("project", "bank_fraud_model")
@@ -251,7 +279,6 @@ for estimators in estimators_list:
       mlflow.log_param('max_depth', depth)
       mlflow.log_param('n_estimators', estimators)
      
-
       # Record a confusion matrix plot for the model test results
       fig, ax = plt.subplots(figsize=(6, 6))  # set dimensions of the plot
       CM = confusion_matrix(y_test, y_pred)
