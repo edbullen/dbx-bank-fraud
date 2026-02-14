@@ -15,12 +15,14 @@ spark = SparkSession.builder.sdkConfig(sdk_config).getOrCreate()
 def run_file_loader(catalog, schema, source_folder, target_table, format_type):
     print(f"Running {format_type} file loader for {catalog}.{schema}.{target_table} from {source_folder}/")
 
-    data_load.auto_loader(spark
+    data_load.transactions_load(spark
                           , catalog=catalog
                           , schema=schema
                           , source_folder=source_folder
                           , target_table=target_table
-                          , format_type=format_type)
+                          , format_type=format_type
+                          , include_existing_files=False
+                          , header=True)
     print("file loader complete")
 
 
@@ -66,20 +68,3 @@ if __name__ == '__main__':
     # get the gold_transactions data in a data-frame and count it.
     gold_df = data_load.gold_transactions(spark, args['catalog'], args['schema'], 'RUS')
     print(gold_df.count(), 'gold transactions count')
-
-
-
-
-    # old examples
-    """
-    run_file_loader("catalog", "schema", source_folder="bank_transactions", target_table="transactions", format_type="csv")
-
-    run_fraud_loader("catalog", "schema"
-                     , url="https://raw.githubusercontent.com/edbullen/dbx-bank-fraud/main/data/fraud_reports/fraud_reports_part_b.csv"
-                     , target_table="fraud_reports"
-                     , format_type="csv"
-                     , columns=["is_fraud", "id"])
-
-    run_silver_load("", "")
-    """
-

@@ -1,81 +1,134 @@
 # Databricks Demo with Retail Bank Fraud Data
 
-## Pipeline overview ##  
-### V1: Azure ADLS and Unity Catalog Volumes
-+ Ingest files from Azure ADLS storage container - table `transactions`
-  + A Unity Volume needs to be set up in advance which references the location where the files will be staged. See `./notebooks/setup_volume_adls.py` for an example.
-  + Copy the `./data/transactions/*.csv` files in the ADLS storage bucket linked to the Unity Volume ref.
-  + The Azure ADLS bucket can be replaced with AWS s3 or GCP GCS bucket and the same approach followed.
-+ Ingest data from REST API - table `fraud_reports`
-+ Join Transactions and Fraud data in Databricks to create table `silver_transactions`
-+ Databricks Delta tables `banking_customers` and `country_coordinates` are joined with `silver_transactions` to produce table `gold_transactions`
+Ingest multiple data-sources and join them to analyze simulated bank fraud transactions and build a machine learning model to predict fraud.
 
-![ETL_Flow](./notebooks/images/data_flow.jpg)     
+The dataset is based on the [PaySim](https://www.msc-les.org/proceedings/emss/2016/EMSS2016_249.pdf) dataset and augmented to introduce simulated geo-data as well.  The Databricks version of this data has a [LICENCE](https://github.com/databricks-demos/dbdemos-dataset/blob/main/LICENSE) for use.
 
 
-### V2: Google Big Query and Unity Catalog Federation
 
-![ETL_Flow](./notebooks/images/data_flow_bq.jpg)   
+![Dashboard](./doc/dashboard_example.png)  
 
+## Data Schema
 
-### V3: Google GCS and Unity Catalog Volumes and DLT Streaming Data
+Files are staged in Unity Catalog volumes and then ingested into Delta Tables.  
 
-![ETL_Flow](./notebooks/images/data_flow_gcs_autoloader_dlt.jpg)   
+![Schema](./doc/retail_fraud_schema.png)  
 
-#### Setup Steps
+# IDE Connect to the workspace environment
+Most steps described can be executed from a local IDE running with a local clone of this Git repo.   Use the Databricks SDK and CLI to authenticate to a remote workspace and it's services.
+  
+The Databricks CLI profiles are configured in `~/.databrickscfg`.  
 
-Pre: Clone the git repo in the Workspace.
-
-1. Prepare a GCS bucket and folder for loading the `transactions` data into - call this folder `transactions`.
-2. *For V3 demo*: Prepare a GCS bucket and folder for loading the `fraud_reports` data into - call this folder `fraud_reports`.
-3. Prepare a GCS bucket and folder for staging data in `staging`. 
-   + Stage the `banking_customers` and `country_coordinates` data in separate folders here.
-4. Each GCS bucket path (down to folder) needs to be set up as a Unity Catalog External Location.
-5. Follow the guide in `./notebooks/setup_volume_gcs` to set up the volumes.   
-6. Create Unity Catalog Volumes to load the staged data from and to stream in the raw transactions:
-   + `transactions_raw`
-   + `fraud_raw` - only needed for the **V3** demo, for streaming Fraud Reports in with DLT
-   + `staging` (set this up in the GCS bucket so there are `customers` and `country_coordinates` subfolders)
-7. Use the notebook `./notebooks/setup_reference_data` to set up some external tables mapped to the external volume locations.
-8. **V3 only**: Create a DLT pipeline, following the instructions in [README_DLT.md](./README_DLT.md) and using `notebooks/setup_silver_transactions_pipeline_DLT.sql` as the pipeline Source code. 
-9. Create the gold view using `./notebooks/setup_gold_transactions_view`
++ Check the available CLI profiles to connect to: `databricks auth profiles`
++ Authenticate to a configured profile using [U2M OAuth](https://docs.databricks.com/aws/en/dev-tools/cli/authentication#oauth-user-to-machine-u2m-authentication): `databricks auth login -p my_profile_name`.  
 
 
-Template GCS or S3 bucket structure:
-+ `<CloudObjectStore>/transactions/` <- Stream transaction CSV files into this location
-+ `<CloudObjectStore>/fraud/`       <-Stream fraud report CSV files into this location
-+ `<CloudObjectStore>/staging/country_coordinates/`    <- stage the country data here to be read into a managed Delta table using CTAS 
-+ `<CloudObjectStore>/staging/customers/`               <- stage the customer data here to be read into a managed Delta table using CTAS     
+
+# Setup - Base Data, Tables and Views
+
+File-based data from `./data` folder in this repo needs to be loaded to a Unity Catalog Volume.  This can be a UC *Managed Volume* (storage and setup managed within Databricks) or an *External Volume* (files stored in an external cloud storage bucket mapped to this volume).  
+
+## Copy the CSV and JSON data to a Unity Catalog Volume
+1. Identify the Databricks Catalog, Schema, Volume name to load the data to.
+2. export local env vars:
++ `export UNITY_CATALOG=<catalog>`
++ `export UNITY_SCHEMA=<schema>`
++ `export UNITY_VOLUME=<volume>`
+
+Manually, in the Workspace GUI, create the volume directory structure:
+```
+<volume>  
+   ├── retail/
+        ├── transactions/
+        │── fraud_reports/ 
+        ├── customers/
+        ├── country_code/            
+```
+
+From the root of this repo:
+
+```
+databricks fs cp ./data/transactions/ dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/transactions/ --overwrite --recursive
+
+databricks fs cp ./data/fraud_reports/ dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/fraud_reports/ --overwrite --recursive  
+
+databricks fs cp ./data/customers_json/ dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/customers/ --overwrite --recursive
+
+databricks fs cp ./data/country_coordinates/country_coordinates.csv dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/country_code/ --overwrite
+```
+
+## Create Base Tables and populate.
+
+These tables can be setup from a remote command prompt session, running in the root of this repo.  
+
+Connect to a remote workspace as per the instructions above in *IDE Connect to the workspace environment*
+
+### 1. Create Bronze transactions `bronze_transactions`
+
+Use the `etl/create.py` script to create the bronze transactions table by specifying the table name `-t` as `bronze_transactions`
+
++ The `create.py` script runs differently for the `bronze_transactions` table and runs an Autoloader incremental load (not a simple CTAS)
+
+Specify the catalog `-c` the schema `-s` to work in.  Specify the volume `-v` in which the source data is staged in.  
+
+Example:  
+```
+python etl/create.py -c users -s ed_bullen -t bronze_transactions -v bank-fraud
+```
+
+### 2. Create the Fraud Reports table `fraud_reports`
+
+This is just a CTAS operation.  
+
+Example:
+```
+python etl/create.py -c users -s ed_bullen -t fraud_reports -v bank-fraud 
+```
+
+### 3. Create the Customer Details table `banking_customers`
+
+This is just a CTAS operation.  Note the option `--format json` for JSON format data.  
+
+Also, if the source folder name is different from the table name, specify the folder with the `-f` option.
+
+Example:
+```
+python etl/create.py -c users -s ed_bullen -t banking_customers -v bank-fraud -f customers --format json
+```
+
+### 4. Create the Country Details table `country_coordinates` 
+
+This is just a CTAS operation. 
+The source folder name is different from the table name, so specify the folder with the `-f` option.
+
+Example:
+```
+python etl/create.py -c users -s ed_bullen -t country_coordinates -v bank-fraud -f country_code 
+```
+
+### 5. Run the Silver Transactions Merge-Load to Create the `silver_transactions` table
+
+```
+python etl/create.py -c users -s ed_bullen -t silver_transactions -v bank-fraud
+``` 
+
+### 6. Create the Gold Transactions View
+
+```
+python etl/create.py -c users -s ed_bullen -t gold_transactions -v bank-fraud
+```
+
+# Setup - ML Model Train and Deploy
+
+## Machine Learning and MLflow
+
+1. Train a model with multiple training runs in an MLflow experiment using the `./notebooks/fraud_model_training.py` notebook
+2. Deploy the best performing model from the MLFlow experiments to Unity Catalog using the  `./notebooks/fraud_model_deploy.py` notebook.
+3. Run a batch set of predictions using the model registered in Unity Catalog and store the results using the `./notebooks/fraud_model_run.py` notebook
 
 
-## ETL Code and Sample Data
 
-### Example ETL Code
-
-Three different types of simple ETL load / transform operations are provided in `./etl/data_load.py`:
-+ streaming in updates from files staged in cloud storage in the `auto_loader()` function.
-+ custom code to pull data from a web URL in the `web_url_pull()` function
-+ SQL wrapped in PySpark for merge+join operations on Delta table-data in the `load_silver_transactions()` function
-
-In addition, an example using *DLT* ([Delta Live Tables](https://docs.databricks.com/en/delta-live-tables/index.html)) is provided
-+ A DLT notebook is located in `./notebooks/setup_silver_transactions_pipeline_DLT`
-
-### Example SQL Code
-Example queries are in the `./sql` folder:
-+ `amount_by_country.sql` 
-+ `amount_over_time.sql`  
-These can be used to underpin dashboard visualizations or reporting. 
-
-### Sample Data
-
-Sample data for running the pipeline is in `./data/`
-
-+ `./data/country_coordinates/*` - static data; just manually load the CSV into a delta table.
-+ `./data/customers/*` - static data; just manually load the CSV into a delta table.
-+ `./data/fraud_reports/*` - `./etl/data_load.web_url_pull()` pulls data directly from here and stages in the `fraud_reports` table (this is an alternative approach to streaming the data in via dropping CSV's into a GCS bucket)
-+ `./data/transactions/*` - use these g-zipped CSV files to load into ADLS (or an S3 / GCS bucket) and simulate streaming files into the pipeline.
-
-## Job Configuration
+# Job Configuration
 
 Use the two notebooks 
 + `./jobs/run_transaction_file_load.py`
@@ -83,37 +136,6 @@ Use the two notebooks
 
 to call the ETL code in `./etl` and run the ETL pipeline.  These read the parameters configured in the Databricks Job run-time configuration and pass them to the code execution.
 
-**Alternatively**
-Use DLT
-+ `./notebooks/setup_silver_transactions_pipeline_DLT.sql`
-
-## Development Environment
-
-Databricks DB-Connect V2 allows IDE development, Git integration and Unit Tests
-
-See function `sdk_connect_config()` in `./etl/common.py` for how this is set up.  
-`main.py` shows an example of how this can be used to run the ETL code against a remote test cluster and data-set from code in the local Dev IDE environment.
-
-## System Environment
-
-Developed against Databricks `LTS 13.3 ML` cluster
-
-Local Env: Python `3.10.12`
-
-Python Libraries: `requirements.txt`   (note DB-Connect version aligns with Databricks cluster version )
-
-## Analytics
-
-Create the `gold_transactions` view using notebook `./notebooks/setup_gold_transactions_view.py`  
-
-The view can be used for doing analytics, building dashboards or training ML models.  
-
-![Dashboard](./notebooks/images/dashboard_example.png)  
 
 
-## Machine Learning and MLflow
-
-1. Train a model with multiple training runs in an MLflow experiment using the `./notebooks/fraud_model_training.py` notebook
-2. Deploy the best performing model from the MLFlow experiments to Unity Catalog using the  `./notebooks/fraud_model_deploy.py` notebook.
-3. Run a batch set of predictions using the model registered in Unity Catalog and store the results using the `./notebooks/fraud_model_run.py` notebook
 

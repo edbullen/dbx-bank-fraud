@@ -28,12 +28,14 @@ autoloader = dbutils.widgets.get("autoloader").lower()
 
 if autoloader == 'true':
   # run autoloader job to check for new files
-  data_load.auto_loader(spark
+  data_load.transactions_load(spark
                       , catalog=catalog
                       , schema=schema
                       , source_folder=source_folder
                       , target_table=target_table
-                      , format_type=format_type)
+                      , format_type=format_type
+                      , include_existing_files=False
+                      , header=True)
 else:
   # run batch job to load new files
   data_load.transactions_load(spark
@@ -41,5 +43,6 @@ else:
                       , schema=schema
                       , source_folder=source_folder
                       , target_table=target_table
-                      , format_type=format_type)
-
+                      , format_type=format_type
+                      , include_existing_files=True
+                      , header=True)
