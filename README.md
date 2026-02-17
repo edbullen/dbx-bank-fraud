@@ -63,7 +63,7 @@ These tables can be setup from a remote command prompt session, running in the r
 
 Connect to a remote workspace as per the instructions above in *IDE Connect to the workspace environment*
 
-### 1. Create Bronze transactions `bronze_transactions`
+1. Create Bronze transactions `bronze_transactions`
 
 + The `create.py` script runs differently for the `bronze_transactions` table and runs an Autoloader incremental load (not a simple CTAS)
 
@@ -74,7 +74,7 @@ Example:
 python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t bronze_transactions -v bank-fraud
 ```
 
-### 2. Create the `fraud_reports`, `banking_customers`, `country_coordinates` tables
+2. Create the `fraud_reports`, `banking_customers`, `country_coordinates` tables
 
 + If the source folder name is different from the table name, specify the folder with the `-f` option.
 
@@ -92,13 +92,13 @@ python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t banking_customers -v 
 python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t country_coordinates -v bank-fraud -f country_code 
 ```
 
-### 3. Run the Silver Transactions Merge-Load to Create the `silver_transactions` table
+3. Run the Silver Transactions Merge-Load to Create the `silver_transactions` table
 
 ```
 python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t silver_transactions -v bank-fraud
 ``` 
 
-### 4. Create the Gold Transactions View
+4. Create the Gold Transactions View
 
 ```
 python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t gold_transactions -v bank-fraud
