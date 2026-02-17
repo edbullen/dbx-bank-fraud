@@ -59,13 +59,11 @@ databricks fs cp ./data/country_coordinates/country_coordinates.csv dbfs:/Volume
 
 ## Create Base Tables and populate.
 
-These tables can be setup from a remote command prompt session, running in the root of this repo.  
+These tables can be setup from a remote command prompt session, running in the root of this repo.  Use the `etl/create.py` script to create the tables.
 
 Connect to a remote workspace as per the instructions above in *IDE Connect to the workspace environment*
 
 ### 1. Create Bronze transactions `bronze_transactions`
-
-Use the `etl/create.py` script to create the bronze transactions table by specifying the table name `-t` as `bronze_transactions`
 
 + The `create.py` script runs differently for the `bronze_transactions` table and runs an Autoloader incremental load (not a simple CTAS)
 
@@ -73,67 +71,55 @@ Specify the catalog `-c` the schema `-s` to work in.  Specify the volume `-v` in
 
 Example:  
 ```
-python etl/create.py -c users -s ed_bullen -t bronze_transactions -v bank-fraud
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t bronze_transactions -v bank-fraud
 ```
 
-### 2. Create the Fraud Reports table `fraud_reports`
+### 2. Create the `fraud_reports`, `banking_customers`, `country_coordinates` tables
 
-This is just a CTAS operation.  
-
-Example:
-```
-python etl/create.py -c users -s ed_bullen -t fraud_reports -v bank-fraud 
-```
-
-### 3. Create the Customer Details table `banking_customers`
-
-This is just a CTAS operation.  Note the option `--format json` for JSON format data.  
-
-Also, if the source folder name is different from the table name, specify the folder with the `-f` option.
-
-Example:
-```
-python etl/create.py -c users -s ed_bullen -t banking_customers -v bank-fraud -f customers --format json
-```
-
-### 4. Create the Country Details table `country_coordinates` 
-
-This is just a CTAS operation. 
-The source folder name is different from the table name, so specify the folder with the `-f` option.
-
-Example:
-```
-python etl/create.py -c users -s ed_bullen -t country_coordinates -v bank-fraud -f country_code 
-```
-
-### 5. Run the Silver Transactions Merge-Load to Create the `silver_transactions` table
++ If the source folder name is different from the table name, specify the folder with the `-f` option.
 
 ```
-python etl/create.py -c users -s ed_bullen -t silver_transactions -v bank-fraud
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t fraud_reports -v bank-fraud 
+```
+
+ Note the option `--format json` for JSON format data.  
+
+```
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t banking_customers -v bank-fraud -f customers --format json
+```
+
+```
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t country_coordinates -v bank-fraud -f country_code 
+```
+
+### 3. Run the Silver Transactions Merge-Load to Create the `silver_transactions` table
+
+```
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t silver_transactions -v bank-fraud
 ``` 
 
-### 6. Create the Gold Transactions View
+### 4. Create the Gold Transactions View
 
 ```
-python etl/create.py -c users -s ed_bullen -t gold_transactions -v bank-fraud
+python etl/create.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t gold_transactions -v bank-fraud
 ```
 
-## Cleardown
+## Cleardown Base Tables and Views
 
 1. Drop Gold Transactions View: 
 ```
-python etl/destroy.py -c users -s ed_bullen -t gold_transactions
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t gold_transactions
 ```  
 2. Drop Silver Transactions Table: 
 ```
-python etl/destroy.py -c users -s ed_bullen -t silver_transactions
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t silver_transactions
 ```  
 3. Drop Bronze Transactions, Fraud Reports, Banking Customers, Country Coordinates.
 ```
-python etl/destroy.py -c users -s ed_bullen -t bronze_transactions
-python etl/destroy.py -c users -s ed_bullen -t fraud_reports
-python etl/destroy.py -c users -s ed_bullen -t banking_customers
-python etl/destroy.py -c users -s ed_bullen -t country_coordinates
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t bronze_transactions
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t fraud_reports
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t banking_customers
+python etl/destroy.py -c $UNITY_CATALOG -s $UNITY_SCHEMA -t country_coordinates
 ``` 
 
 4. Delete all the files stored in Unity Catalog Volume(s)
@@ -147,8 +133,7 @@ databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail
 databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/country_code -r
 ``` 
 
-
-# Setup - ML Model Train and Deploy
+# Setup - ML Models and AI Agents
 
 ## Machine Learning and MLflow
 
