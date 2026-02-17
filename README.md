@@ -118,6 +118,36 @@ python etl/create.py -c users -s ed_bullen -t silver_transactions -v bank-fraud
 python etl/create.py -c users -s ed_bullen -t gold_transactions -v bank-fraud
 ```
 
+## Cleardown
+
+1. Drop Gold Transactions View: 
+```
+python etl/destroy.py -c users -s ed_bullen -t gold_transactions
+```  
+2. Drop Silver Transactions Table: 
+```
+python etl/destroy.py -c users -s ed_bullen -t silver_transactions
+```  
+3. Drop Bronze Transactions, Fraud Reports, Banking Customers, Country Coordinates.
+```
+python etl/destroy.py -c users -s ed_bullen -t bronze_transactions
+python etl/destroy.py -c users -s ed_bullen -t fraud_reports
+python etl/destroy.py -c users -s ed_bullen -t banking_customers
+python etl/destroy.py -c users -s ed_bullen -t country_coordinates
+``` 
+
+4. Delete all the files stored in Unity Catalog Volume(s)
+```
+databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/transactions -r
+
+databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/fraud_reports -r
+
+databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/customers -r
+
+databricks fs rm dbfs:/Volumes/$UNITY_CATALOG/$UNITY_SCHEMA/$UNITY_VOLUME/retail/country_code -r
+``` 
+
+
 # Setup - ML Model Train and Deploy
 
 ## Machine Learning and MLflow

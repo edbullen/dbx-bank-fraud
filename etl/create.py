@@ -62,7 +62,7 @@ def create_gold_view(spark, catalog, schema):
         f"""
         CREATE OR REPLACE VIEW `{catalog}`.`{schema}`.`gold_transactions`
         AS
-        SELECT t.* EXCEPT(pos, _metadata, source_file, amount, countryOrig, countryDest, is_fraud), c.* EXCEPT(id),
+        SELECT t.* EXCEPT(amount, countryOrig, countryDest, is_fraud), c.* EXCEPT(id),
                o.alpha3_code as countryOrig, o.country as countryOrig_name, o.long_avg as countryLongOrig_long, o.lat_avg as countryLatOrig_lat,
                d.alpha3_code as countryDest, d.country as countryDest_name, d.long_avg as countryLongDest_long, d.lat_avg as countryLatDest_lat,
                CAST(t.amount AS DOUBLE) as amount,
