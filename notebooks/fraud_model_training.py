@@ -91,7 +91,7 @@ import mlflow
 table_fqn = f"{unity_catalog}.{unity_schema}.gold_transactions"
 
 # Create an MLflow SparkDataset whose source is the UC Delta table
-train_ds = mlflow.data.load_delta(table_name=table_fqn)   # SparkDataset
+train_ds = mlflow.data.load_delta(table_name=table_fqn, profile=None)   # SparkDataset
 base_df = train_ds.df                                     # Spark DataFrame
 
 # Keep the existing projection logic (Spark-side)
@@ -228,8 +228,10 @@ import time
 mlflow.set_experiment(f"/Users/{current_user}/bank_fraud_experiment")
 # see documentation for shared workspace experiment options: https://docs.databricks.com/en/mlflow/experiments.html 
 
-estimators_list = [10, 20, 100]
-depth_list = [10, 20, 50]
+#estimators_list = [10, 20, 100]
+estimators_list = [10, 20]
+#depth_list = [10, 20, 50]
+depth_list = [10, 20]
 
 run_timestamp = int(time.time())
 
