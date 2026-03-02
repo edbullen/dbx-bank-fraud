@@ -22,7 +22,11 @@ The Databricks CLI profiles are configured in `~/.databrickscfg`.
 + Check the available CLI profiles to connect to: `databricks auth profiles`
 + Authenticate to a configured profile using [U2M OAuth](https://docs.databricks.com/aws/en/dev-tools/cli/authentication#oauth-user-to-machine-u2m-authentication): `databricks auth login -p my_profile_name`.  
 
-
+*Either* 
++ set the DEFAULT profile to work in with the Databricks CLI by editing `~/.databrickscfg` and setting the profile name in the `[DEFAULT]` section  
+*Or*  
++ Add the -p `<my_profile_name>` to the end of all Databricks CLI commands.   
+in order  to make sure they get executed against the correct workspace. 
 
 # Setup - Base Data, Tables and Views
 
@@ -59,6 +63,11 @@ databricks fs cp ./data/country_coordinates/country_coordinates.csv dbfs:/Volume
 
 ## Create Base Tables and populate.
 
+Before running the python scripts, make sure to set the Databricks SDK profile to work in.  EG
+```
+export DATABRICKS_CONFIG_PROFILE=my_profile_name
+```
+
 These tables can be setup from a remote command prompt session, running in the root of this repo.  Use the `etl/create.py` script to create the tables.
 
 Connect to a remote workspace as per the instructions above in *IDE Connect to the workspace environment*
@@ -67,7 +76,8 @@ Connect to a remote workspace as per the instructions above in *IDE Connect to t
 
 + The `create.py` script runs differently for the `bronze_transactions` table and runs an Autoloader incremental load (not a simple CTAS)
 
-Specify the catalog `-c` the schema `-s` to work in.  Specify the volume `-v` in which the source data is staged in.  
+Specify the catalog `-c` the schema `-s` to work in.  
+Specify the volume `-v` in which the source data is staged in.   
 
 Example:  
 ```
