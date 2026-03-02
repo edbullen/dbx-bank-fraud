@@ -60,32 +60,6 @@ model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 # COMMAND ----------
 
 # DBTITLE 1,Load Data
-# load from the gold transactions view.  This could be a separate Features table tracked in Unity Catalog
-#  - only pick a subset of columns for a simple demonstration
-# we want numeric data for our ML model 
-# - can't do this directly in the query for categorical features (do this later with OHE)
-
-# One of the requirements for a Feature table is a Primary Key - id in this example.
-#transactions_df = spark.sql(f"""SELECT id,
-#                            CAST(amount as FLOAT),
-#                            CAST(newBalanceDest as FLOAT),
-#                            CAST(oldBalanceDest as FLOAT),
-#                            CAST(diffOrig as FLOAT),
-#                            CAST(diffDest as FLOAT),
-#                            countryOrig_name,
-#                            countryDest_name,
-#                            type,
-#                            CASE 
-#                              WHEN is_fraud = 'false' THEN 0
-#                              WHEN is_fraud = "true" THEN 1
-#                              ELSE 'NaN'
-#                            END as is_fraud
-#                            FROM {unity_catalog}.{unity_schema}.gold_transactions""")
-
-
-# COMMAND ----------
-
-# DBTITLE 1,Load Data
 import mlflow
 
 table_fqn = f"{unity_catalog}.{unity_schema}.gold_transactions"
