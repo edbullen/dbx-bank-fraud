@@ -19,6 +19,10 @@ NON_INTERACTIVE=false
 SKIP_ML=false
 SKIP_DASHBOARD=false
 SKIP_NOTEBOOKS=false
+GENIE=false
+SERVE_MODEL=false
+ENDPOINT_NAME="bank-fraud-predict"
+MODEL_VERSION=""   # empty = use production alias or latest version
 DASHBOARD_JSON="$ROOT/dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json"
 
 usage() {
@@ -35,6 +39,10 @@ Usage: deploy.sh [OPTIONS]
   --skip-ml                   Do not run training or deploy notebooks (still imports if not --skip-notebooks)
   --skip-notebooks            Do not import fraud_model* notebooks to workspace (dashboard-only deploy)
   --skip-dashboard            Do not create or publish the dashboard
+  --genie                     Create a Genie space for gold_transactions (uses same warehouse as dashboard)
+  --serve-model               Create a model serving endpoint for the fraud model (requires model in UC)
+  --endpoint-name NAME        Name for the serving endpoint (default: bank-fraud-predict)
+  --model-version VER         Model version to serve (default: production alias, else latest)
   -y, --yes, --non-interactive  No prompts; fail if required params missing
   -i, --interactive           Prompt for missing params
   -h, --help                  Show this help and exit
@@ -57,6 +65,10 @@ while [[ $# -gt 0 ]]; do
     --skip-ml)          SKIP_ML=true; shift ;;
     --skip-notebooks)   SKIP_NOTEBOOKS=true; shift ;;
     --skip-dashboard)   SKIP_DASHBOARD=true; shift ;;
+    --genie)            GENIE=true; shift ;;
+    --serve-model)      SERVE_MODEL=true; shift ;;
+    --endpoint-name)    ENDPOINT_NAME="$2"; shift 2 ;;
+    --model-version)    MODEL_VERSION="$2"; shift 2 ;;
     -y|--yes|--non-interactive) NON_INTERACTIVE=true; shift ;;
     -i|--interactive)   NON_INTERACTIVE=false; shift ;;
     -h|--help)          usage; exit 0 ;;
@@ -159,6 +171,9 @@ fi
 if ! $SKIP_DASHBOARD; then
   while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for dashboard)" "" WAREHOUSE_ID; done
 fi
+if $GENIE && [[ -z "$WAREHOUSE_ID" ]]; then
+  while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for Genie space)" "" WAREHOUSE_ID; done
+fi
 
 # --- Deploy notebooks (fraud_model*) ---
 if ! $SKIP_NOTEBOOKS; then
@@ -243,6 +258,88 @@ SUB
   submit_notebook "$DEPLOY_PATH" "fraud-model-deploy"
 fi
 
+# --- Model serving endpoint: create endpoint for UC model ---
+if $SERVE_MODEL; then
+  echo "=== Creating model serving endpoint ==="
+  MODEL_FULL_NAME="$CATALOG.$SCHEMA.bank_fraud_predict"
+  VERSION_TO_SERVE="$MODEL_VERSION"
+  if [[ -z "$VERSION_TO_SERVE" ]]; then
+    ALIAS_OUT="$(dbx model-versions get-by-alias "$MODEL_FULL_NAME" production -o json 2>/dev/null)" || true
+    if [[ -n "$ALIAS_OUT" ]]; then
+      VERSION_TO_SERVE="$(echo "$ALIAS_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d.get('version','')))" 2>/dev/null)"
+    fi
+    if [[ -z "$VERSION_TO_SERVE" ]]; then
+      LIST_OUT="$(dbx model-versions list "$MODEL_FULL_NAME" --max-results 50 -o json 2>/dev/null)" || true
+      VERSION_TO_SERVE="$(echo "$LIST_OUT" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    vers = d.get('model_versions') or d.get('versions') or []
+    if not vers and 'model_versions' in d: vers = d['model_versions']
+    nums = []
+    for v in vers:
+        if not v: continue
+        n = v.get('version') or v.get('name') or 0
+        try: nums.append(int(n))
+        except (TypeError, ValueError): pass
+    print(str(max(nums)) if nums else '')
+except Exception:
+    print('')
+" 2>/dev/null)"
+    fi
+  fi
+  if [[ -z "$VERSION_TO_SERVE" ]]; then
+    echo "Warning: Could not resolve model version for $MODEL_FULL_NAME (set --model-version or ensure model is registered with production alias). Skipping serving endpoint."
+  else
+    SERVING_JSON="$(mktemp)"
+    python3 <<PY
+import json
+payload = {
+  "name": "$ENDPOINT_NAME",
+  "config": {
+    "served_entities": [
+      {
+        "name": "current",
+        "entity_name": "$MODEL_FULL_NAME",
+        "entity_version": "$VERSION_TO_SERVE",
+        "workload_size": "Small",
+        "scale_to_zero_enabled": True
+      }
+    ]
+  }
+}
+with open("$SERVING_JSON", "w") as f:
+    json.dump(payload, f)
+PY
+    CREATE_ERR=""
+    if ! CREATE_OUT="$(dbx serving-endpoints create --json @"$SERVING_JSON" --no-wait 2>&1)"; then
+      CREATE_ERR="$CREATE_OUT"
+    fi
+    if [[ -z "$CREATE_ERR" ]]; then
+      echo "Serving endpoint '$ENDPOINT_NAME' created (building in background)."
+      STATE_FILE="$ROOT/.deploy-state.json"
+      if [[ -f "$STATE_FILE" ]]; then
+        python3 <<PY
+import json
+with open("$STATE_FILE") as f:
+    d = json.load(f)
+d["serving_endpoint_name"] = "$ENDPOINT_NAME"
+with open("$STATE_FILE", "w") as f:
+    json.dump(d, f)
+PY
+      else
+        echo "{\"serving_endpoint_name\": \"$ENDPOINT_NAME\", \"workspace_path\": \"$WORKSPACE_PATH\"}" > "$STATE_FILE"
+      fi
+    else
+      echo "Serving endpoint create failed: $CREATE_ERR"
+      if echo "$CREATE_ERR" | grep -qi "already exists"; then
+        echo "Delete the existing endpoint first or use a different --endpoint-name."
+      fi
+    fi
+    rm -f "$SERVING_JSON"
+  fi
+fi
+
 # --- Dashboard: create from JSON and publish ---
 if ! $SKIP_DASHBOARD && [[ -f "$DASHBOARD_JSON" ]]; then
   echo "=== Creating and publishing dashboard ==="
@@ -274,13 +371,76 @@ PY
     if [[ -n "$DASHBOARD_ID" ]]; then
       echo "Publishing dashboard $DASHBOARD_ID"
       dbx lakeview publish "$DASHBOARD_ID" --warehouse-id "$WAREHOUSE_ID" 2>/dev/null || true
-      echo "{\"dashboard_id\": \"$DASHBOARD_ID\", \"workspace_path\": \"$WORKSPACE_PATH\"}" > "$ROOT/.deploy-state.json"
+      STATE_FILE="$ROOT/.deploy-state.json"
+      if [[ -f "$STATE_FILE" ]]; then
+        python3 -c "
+import json
+with open('$STATE_FILE') as f: d = json.load(f)
+d['dashboard_id'] = '$DASHBOARD_ID'
+d['workspace_path'] = '$WORKSPACE_PATH'
+with open('$STATE_FILE', 'w') as f: json.dump(d, f)
+"
+      else
+        echo "{\"dashboard_id\": \"$DASHBOARD_ID\", \"workspace_path\": \"$WORKSPACE_PATH\"}" > "$STATE_FILE"
+      fi
     fi
   else
     echo "Note: Dashboard create failed. Create manually from dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json (Import dashboard in the UI) if needed."
   fi
 elif ! $SKIP_DASHBOARD && [[ ! -f "$DASHBOARD_JSON" ]]; then
   echo "Warning: Dashboard template not found at $DASHBOARD_JSON; skipping dashboard."
+fi
+
+# --- Genie space: create space for gold_transactions only ---
+if $GENIE; then
+  echo "=== Creating Genie space (gold_transactions) ==="
+  GENIE_REQ_TMP="$(mktemp)"
+  python3 <<PY
+import json
+# Minimal serialized_space: one view only (gold_transactions)
+space = {
+  "version": 2,
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "$CATALOG.$SCHEMA.gold_transactions",
+        "description": ["Gold transactions view for retail bank fraud analytics"]
+      }
+    ]
+  }
+}
+req = {
+  "title": "Retail Bank Fraud Genie",
+  "description": "Genie space for gold_transactions view",
+  "warehouse_id": "$WAREHOUSE_ID",
+  "serialized_space": json.dumps(space)
+}
+with open("$GENIE_REQ_TMP", "w") as f:
+    json.dump(req, f)
+PY
+  GENIE_OUT="$(dbx api post /api/2.0/genie/spaces --json @"$GENIE_REQ_TMP" -o json 2>/dev/null)" || true
+  rm -f "$GENIE_REQ_TMP"
+  if [[ -n "$GENIE_OUT" ]]; then
+    GENIE_SPACE_ID="$(echo "$GENIE_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('space_id',''))" 2>/dev/null)"
+    if [[ -n "$GENIE_SPACE_ID" ]]; then
+      echo "Genie space created: $GENIE_SPACE_ID"
+      STATE_FILE="$ROOT/.deploy-state.json"
+      if [[ -f "$STATE_FILE" ]]; then
+        python3 <<PY
+import json
+with open("$STATE_FILE") as f:
+    d = json.load(f)
+d["genie_space_id"] = "$GENIE_SPACE_ID"
+with open("$STATE_FILE", "w") as f:
+    json.dump(d, f)
+PY
+      else
+        echo "{\"genie_space_id\": \"$GENIE_SPACE_ID\", \"workspace_path\": \"$WORKSPACE_PATH\"}" > "$STATE_FILE"
+      fi
+    fi
+  else
+    echo "Note: Genie space create failed. Check warehouse_id and API access."
+  fi
 fi
 
 echo "=== deploy.sh finished ==="

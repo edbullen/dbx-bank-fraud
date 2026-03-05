@@ -24,8 +24,8 @@ Usage: undeploy.sh [OPTIONS]
   -i, --interactive           Prompt for missing params
   -h, --help                  Show this help and exit
 
-Reads .deploy-state.json (written by deploy.sh) to find the dashboard ID to trash.
-Does not unregister ML models or delete experiments.
+Reads .deploy-state.json (written by deploy.sh) to find the dashboard ID, Genie space, and
+serving endpoint name to remove. Does not unregister ML models or delete experiments.
 EOF
 }
 
@@ -94,10 +94,12 @@ if ! dbx workspace list / &>/dev/null; then
 fi
 export DATABRICKS_CONFIG_PROFILE="$PROFILE"
 
-# --- Trash dashboard from state ---
+# --- Trash dashboard and Genie space from state ---
 if [[ -f "$STATE_FILE" ]]; then
   DASHBOARD_ID="$(python3 -c "import json; d=json.load(open('$STATE_FILE')); print(d.get('dashboard_id',''))" 2>/dev/null)"
   WORKSPACE_PATH="$(python3 -c "import json; d=json.load(open('$STATE_FILE')); print(d.get('workspace_path',''))" 2>/dev/null)"
+  GENIE_SPACE_ID="$(python3 -c "import json; d=json.load(open('$STATE_FILE')); print(d.get('genie_space_id',''))" 2>/dev/null)"
+  SERVING_ENDPOINT_NAME="$(python3 -c "import json; d=json.load(open('$STATE_FILE')); print(d.get('serving_endpoint_name',''))" 2>/dev/null)"
   if [[ -n "$DASHBOARD_ID" ]]; then
     echo "=== Trashing dashboard $DASHBOARD_ID ==="
     dbx lakeview trash "$DASHBOARD_ID" 2>/dev/null || true
@@ -105,8 +107,18 @@ if [[ -f "$STATE_FILE" ]]; then
   else
     echo "No dashboard_id in $STATE_FILE; skipping dashboard."
   fi
+  if [[ -n "$GENIE_SPACE_ID" ]]; then
+    echo "=== Trashing Genie space $GENIE_SPACE_ID ==="
+    dbx genie trash-space "$GENIE_SPACE_ID" 2>/dev/null || true
+    echo "Genie space trashed."
+  fi
+  if [[ -n "$SERVING_ENDPOINT_NAME" ]]; then
+    echo "=== Deleting serving endpoint $SERVING_ENDPOINT_NAME ==="
+    dbx serving-endpoints delete "$SERVING_ENDPOINT_NAME" 2>/dev/null || true
+    echo "Serving endpoint deleted."
+  fi
 else
-  echo "No .deploy-state.json found (run deploy.sh first). Skipping dashboard."
+  echo "No .deploy-state.json found (run deploy.sh first). Skipping dashboard, Genie, and serving endpoint."
   WORKSPACE_PATH=""
 fi
 

@@ -78,9 +78,14 @@ After the base data and tables are in place (e.g. via `create.sh`), use `deploy.
 ./deploy.sh -y -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id>
 ```
 
-**Options:** `--skip-ml` deploys only the notebooks (no training/deploy run). `--skip-dashboard` skips creating the dashboard. `--cluster-id` is optional (omit for serverless). Run `./deploy.sh --help` for all options.
+**Example (with model serving endpoint):**
+```bash
+./deploy.sh -y -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id> --serve-model
+```
 
-**Undeploy:** Run `undeploy.sh` to trash the dashboard (and optionally remove the workspace path with `--remove-workspace`). It does not unregister ML models or delete experiments.
+**Options:** `--skip-ml` deploys only the notebooks (no training/deploy run). `--skip-dashboard` skips creating the dashboard. `--genie` creates a Genie space for the `gold_transactions` view (warehouse ID required when using `--genie`). `--serve-model` creates a model serving endpoint for the fraud model (uses the UC model `bank_fraud_predict`; by default the version with alias `production` or the latest version). `--endpoint-name` and `--model-version` customize the endpoint name and model version. `--cluster-id` is optional (omit for serverless). Run `./deploy.sh --help` for all options.
+
+**Undeploy:** Run `undeploy.sh` to trash the dashboard, any Genie space, and the model serving endpoint created by deploy (and optionally remove the workspace path with `--remove-workspace`). It does not unregister ML models or delete experiments.
 ```bash
 ./undeploy.sh -p myprofile
 ./undeploy.sh -p myprofile --remove-workspace
