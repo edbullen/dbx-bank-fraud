@@ -18,6 +18,7 @@ CLUSTER_ID=""
 NON_INTERACTIVE=false
 SKIP_ML=false
 SKIP_DASHBOARD=false
+SKIP_NOTEBOOKS=false
 DASHBOARD_JSON="$ROOT/dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json"
 
 usage() {
@@ -31,7 +32,8 @@ Usage: deploy.sh [OPTIONS]
   --workspace-path PATH       Workspace path for notebooks (e.g. /Users/you@example.com/dbx-bank-fraud)
   --warehouse-id ID           SQL warehouse ID for the Lakeview dashboard (required for dashboard)
   --cluster-id ID             Optional: existing cluster ID for ML notebooks; if omitted, uses serverless compute
-  --skip-ml                   Deploy notebooks only; do not run training or deploy notebooks
+  --skip-ml                   Do not run training or deploy notebooks (still imports if not --skip-notebooks)
+  --skip-notebooks            Do not import fraud_model* notebooks to workspace (dashboard-only deploy)
   --skip-dashboard            Do not create or publish the dashboard
   -y, --yes, --non-interactive  No prompts; fail if required params missing
   -i, --interactive           Prompt for missing params
@@ -53,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     --warehouse-id)     WAREHOUSE_ID="$2"; shift 2 ;;
     --cluster-id)       CLUSTER_ID="$2"; shift 2 ;;
     --skip-ml)          SKIP_ML=true; shift ;;
+    --skip-notebooks)   SKIP_NOTEBOOKS=true; shift ;;
     --skip-dashboard)   SKIP_DASHBOARD=true; shift ;;
     -y|--yes|--non-interactive) NON_INTERACTIVE=true; shift ;;
     -i|--interactive)   NON_INTERACTIVE=false; shift ;;
@@ -141,7 +144,10 @@ export DATABRICKS_CONFIG_PROFILE="$PROFILE"
 
 while ! require_param "catalog" "$CATALOG"; do prompt_val "Unity Catalog name" "" CATALOG; done
 while ! require_param "schema" "$SCHEMA"; do prompt_val "Unity Schema name" "" SCHEMA; done
-while ! require_param "workspace-path" "$WORKSPACE_PATH"; do prompt_val "Workspace path for notebooks (e.g. /Users/you@example.com/dbx-bank-fraud)" "" WORKSPACE_PATH; done
+# workspace-path required only when deploying notebooks or running ML (need notebook paths)
+if ! $SKIP_NOTEBOOKS || ! $SKIP_ML; then
+  while ! require_param "workspace-path" "$WORKSPACE_PATH"; do prompt_val "Workspace path for notebooks (e.g. /Users/you@example.com/dbx-bank-fraud)" "" WORKSPACE_PATH; done
+fi
 
 if ! $SKIP_ML; then
   # cluster-id is optional; when empty we use serverless compute (no prompt required)
@@ -155,15 +161,19 @@ if ! $SKIP_DASHBOARD; then
 fi
 
 # --- Deploy notebooks (fraud_model*) ---
-echo "=== Deploying fraud_model* notebooks to workspace ==="
-NOTES_DIR="$ROOT/notebooks"
-for f in fraud_model_training fraud_model_deploy fraud_model_run; do
-  src="$NOTES_DIR/${f}.py"
-  if [[ -f "$src" ]]; then
-    dbx workspace import "$WORKSPACE_PATH/notebooks/$f" --file "$src" --language PYTHON --format SOURCE --overwrite
-    echo "Imported $f"
-  fi
-done
+if ! $SKIP_NOTEBOOKS; then
+  echo "=== Deploying fraud_model* notebooks to workspace ==="
+  NOTES_DIR="$ROOT/notebooks"
+  for f in fraud_model_training fraud_model_deploy fraud_model_run; do
+    src="$NOTES_DIR/${f}.py"
+    if [[ -f "$src" ]]; then
+      dbx workspace import "$WORKSPACE_PATH/notebooks/$f" --file "$src" --language PYTHON --format SOURCE --overwrite
+      echo "Imported $f"
+    fi
+  done
+else
+  echo "=== Skipping notebook import (--skip-notebooks) ==="
+fi
 
 # --- Build ML: run training then deploy ---
 if ! $SKIP_ML; then
