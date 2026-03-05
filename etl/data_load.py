@@ -49,7 +49,7 @@ def transactions_load(
      .writeStream
      .option("checkpointLocation", checkpoint_path)
      .trigger(availableNow=True)
-     .toTable(f"{catalog}.{schema}.{target_table}")
+     .toTable(f"`{catalog}`.`{schema}`.`{target_table}`")
      )
 
 
@@ -75,7 +75,7 @@ def web_url_pull(spark, catalog, schema, url, target_table, format_type="csv", c
 
         # Write PySpark DataFrame to Delta table
         df.write.format("delta").mode("overwrite")\
-            .saveAsTable(f"{catalog}.{schema}.{target_table}")
+            .saveAsTable(f"`{catalog}`.`{schema}`.`{target_table}`")
 
     else:
         raise ValueError(f"Unhandled file format type: {format_type}")
@@ -105,17 +105,17 @@ def load_silver_transactions(spark, catalog, schema,
             CAST(newBalanceOrig AS DOUBLE) - CAST(oldBalanceOrig AS DOUBLE) as diffOrig,
             CAST(newBalanceDest AS DOUBLE) - CAST(oldBalanceDest AS DOUBLE) as diffDest,
             f.is_fraud
-        FROM {source_catalog}.{source_schema}.{source_table} t
-        LEFT JOIN {catalog}.{schema}.fraud_reports f USING(id)
+        FROM `{source_catalog}`.`{source_schema}`.`{source_table}` t
+        LEFT JOIN `{catalog}`.`{schema}`.fraud_reports f USING(id)
     """
 
     spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {catalog}.{schema}.{target_table} AS
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`{schema}`.`{target_table}` AS
         SELECT * FROM ({source_query}) WHERE 1=0
     """)
 
     spark.sql(f"""
-        MERGE INTO {catalog}.{schema}.{target_table} as target
+        MERGE INTO `{catalog}`.`{schema}`.`{target_table}` as target
         USING ({source_query}) as source
         ON source.id = target.id
         WHEN NOT MATCHED
@@ -132,7 +132,7 @@ def gold_transactions(spark: SparkSession, source_catalog: str, source_schema: s
     :returns: Spark DataFrame
     """
 
-    result = spark.table(f"{source_catalog}.{source_schema}.gold_transactions")
+    result = spark.table(f"`{source_catalog}`.`{source_schema}`.gold_transactions")
     if country:
         return result.filter(result["country"] == country)
     else:

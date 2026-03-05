@@ -1,0 +1,570 @@
+{
+  "datasets": [
+    {
+      "name": "d43c8cd6",
+      "displayName": "inter_country_flow",
+      "queryLines": [
+        "select countryOrig , countryDest , type, value from (\n",
+        "    select countryOrig , countryDest , type, count(amount ) as value\n",
+        "    from gold_transactions\n",
+        "    where amount > 350000\n",
+        "    group by countryOrig , countryDest ,type\n",
+        ") order by value desc\n",
+        "limit 20\n",
+        "\n"
+      ],
+      "catalog": "main",
+      "schema": "ed_bullen"
+    },
+    {
+      "name": "7aae52c0",
+      "displayName": "amount_per_country",
+      "queryLines": [
+        "-- NOTE: set the Unity Catalog and Schema as appropriate to pick up the location of view gold_transactions\n",
+        "SELECT countryOrig , countryDest , type, value\n",
+        "FROM (\n",
+        "    select countryOrig , countryDest , type, sum(amount ) as value\n",
+        "    from gold_transactions\n",
+        "    where is_fraud and amount > 350000\n",
+        "    group by countryOrig , countryDest ,type\n",
+        ")\n"
+      ],
+      "catalog": "main",
+      "schema": "ed_bullen"
+    },
+    {
+      "name": "d1fb5a09",
+      "displayName": "fraud_type_by_country",
+      "queryLines": [
+        "select type, is_fraud, countryOrig, count(1) as count\n",
+        "from gold_transactions\n",
+        "group by type, is_fraud, countryOrig;"
+      ],
+      "catalog": "main",
+      "schema": "ed_bullen"
+    },
+    {
+      "name": "18e19e3b",
+      "displayName": "timeseries",
+      "queryLines": [
+        "-- Select the count and amount / value of fraud transactions over time - chunked into 1 hr series\n",
+        "-- use this for populating the Fraud over time sample dashboard, as shown in the README screenshot\n",
+        "\n",
+        "-- NOTE: set the Unity Catalog and Schema as appropriate to pick up the location of view gold_transactions\n",
+        "SELECT ts, count(1) nbFraudTransactions, sum(amount) sumFraudTransactions\n",
+        "FROM (\n",
+        "    select from_unixtime(unix_timestamp(current_timestamp()) + (step * 3600)) ts, amount\n",
+        "    from gold_transactions\n",
+        "    join (--just getting the last 30 days\n",
+        "        select max(step)-(24*30) windowStart, max(step) windowEnd\n",
+        "        from gold_transactions\n",
+        "    ) on step >= windowStart and step <= windowEnd\n",
+        "    where is_fraud\n",
+        ")\n",
+        "GROUP BY ts\n",
+        "ORDER BY ts"
+      ],
+      "catalog": "main",
+      "schema": "ed_bullen"
+    },
+    {
+      "name": "c4f11f78",
+      "displayName": "Untitled dataset",
+      "queryLines": [
+        ""
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "de2c2563",
+      "displayName": "fraud_analytics",
+      "layout": [
+        {
+          "widget": {
+            "name": "592cd7e2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d43c8cd6",
+                  "fields": [
+                    {
+                      "name": "countryOrig",
+                      "expression": "`countryOrig`"
+                    },
+                    {
+                      "name": "countryDest",
+                      "expression": "`countryDest`"
+                    },
+                    {
+                      "name": "sum(value)",
+                      "expression": "SUM(`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "sankey",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(value)",
+                  "displayName": "Sum of value"
+                },
+                "stages": [
+                  {
+                    "fieldName": "countryOrig",
+                    "displayName": "countryOrig"
+                  },
+                  {
+                    "fieldName": "countryDest",
+                    "displayName": "countryDest"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "d9df17f5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7aae52c0",
+                  "fields": [
+                    {
+                      "name": "countryDest",
+                      "expression": "`countryDest`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "choropleth-map",
+              "encodings": {
+                "region": {
+                  "regionType": "mapbox-v4-admin",
+                  "admin0": {
+                    "fieldName": "countryDest",
+                    "type": "field",
+                    "geographicRole": "admin0-iso-3166-1-alpha-3",
+                    "displayName": "countryDest"
+                  }
+                }
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "opacity": 0.55
+              },
+              "frame": {
+                "showTitle": false,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "ad5fc896",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d1fb5a09",
+                  "fields": [
+                    {
+                      "name": "type",
+                      "expression": "`type`"
+                    },
+                    {
+                      "name": "sum(count)",
+                      "expression": "SUM(`count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "type",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "type"
+                },
+                "y": {
+                  "fieldName": "sum(count)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Sum of count"
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Fraud Types by Country",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "6116525e",
+            "queries": [
+              {
+                "name": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f0582bb99d1e34889ed526e108c930_countryOrig",
+                "query": {
+                  "datasetName": "d1fb5a09",
+                  "fields": [
+                    {
+                      "name": "countryOrig",
+                      "expression": "`countryOrig`"
+                    },
+                    {
+                      "name": "countryOrig_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "countryOrig",
+                    "displayName": "countryOrig",
+                    "queryName": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f0582bb99d1e34889ed526e108c930_countryOrig"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true
+              },
+              "selection": {
+                "defaultSelection": {
+                  "operator": {
+                    "operator": "AND",
+                    "args": []
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "0b6b0c1f",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "18e19e3b",
+                  "fields": [
+                    {
+                      "name": "ts",
+                      "expression": "`ts`"
+                    },
+                    {
+                      "name": "sum(sumFraudTransactions)",
+                      "expression": "SUM(`sumFraudTransactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "ts",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "ts"
+                },
+                "y": {
+                  "fieldName": "sum(sumFraudTransactions)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Sum of sumFraudTransactions"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "400effbe",
+            "queries": [
+              {
+                "name": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f0582bb99d1e34889ed526e108c930_type",
+                "query": {
+                  "datasetName": "d1fb5a09",
+                  "fields": [
+                    {
+                      "name": "type",
+                      "expression": "`type`"
+                    },
+                    {
+                      "name": "type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "type",
+                    "displayName": "type",
+                    "queryName": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f0582bb99d1e34889ed526e108c930_type"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "PaymentType"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 11,
+            "width": 2,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "7def803b",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "d5a6345b",
+            "queries": [
+              {
+                "name": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f052c25858125387af2b13a4a93942_countryOrig",
+                "query": {
+                  "datasetName": "7aae52c0",
+                  "fields": [
+                    {
+                      "name": "countryOrig",
+                      "expression": "`countryOrig`"
+                    },
+                    {
+                      "name": "countryOrig_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "countryOrig",
+                    "displayName": "countryOrig",
+                    "queryName": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f052c25858125387af2b13a4a93942_countryOrig"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "3ccb486c",
+            "queries": [
+              {
+                "name": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f052c16a8e1eeda9052b2c1647ebd6_countryOrig",
+                "query": {
+                  "datasetName": "d43c8cd6",
+                  "fields": [
+                    {
+                      "name": "countryOrig",
+                      "expression": "`countryOrig`"
+                    },
+                    {
+                      "name": "countryOrig_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "countryOrig",
+                    "displayName": "countryOrig",
+                    "queryName": "dashboards/01f052c163421050934e97b7e49036f2/datasets/01f052c16a8e1eeda9052b2c1647ebd6_countryOrig"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "ebd7eb0b",
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {},
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}

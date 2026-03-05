@@ -4,3 +4,4 @@ local/*
 .vscode/
 __pycache__/
 *.py[cod]
+.deploy-state.json

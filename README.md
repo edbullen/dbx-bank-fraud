@@ -28,6 +28,66 @@ The Databricks CLI profiles are configured in `~/.databrickscfg`.
 + Add the -p `<my_profile_name>` to the end of all Databricks CLI commands.   
 in order  to make sure they get executed against the correct workspace. 
 
+# Quick-start deployment
+
+Use the `create.sh` and `destroy.sh` scripts to deploy or tear down the demo from the repo root. They support both **non-interactive** (one-shot, suitable for CI or AI agents) and **interactive** (step-by-step prompts) modes.
+
+**Non-interactive (all parameters on the command line):**
+```bash
+./create.sh --non-interactive --profile myprofile --catalog main --schema default --volume bank-fraud
+# ... later, to tear down:
+./destroy.sh --non-interactive --profile myprofile --catalog main --schema default --volume bank-fraud
+```
+
+**Interactive (prompted for profile, catalog, schema, volume):**
+```bash
+./create.sh
+# or with partial args:
+./create.sh --catalog main --schema default
+```
+
+**Optional:** sync notebooks to the workspace and create the UC volume if it does not exist:
+```bash
+./create.sh -y -p myprofile -c main -s default -v bank-fraud --workspace-path /Users/me@example.com/dbx-bank-fraud --create-volume
+```
+
+For full options run:
+- `./create.sh --help`
+- `./destroy.sh --help`
+
+# Deploy ML and dashboard
+
+After the base data and tables are in place (e.g. via `create.sh`), use `deploy.sh` to deploy and **build** the ML artefacts and the Retail Bank Fraud dashboard:
+
+1. **Notebooks** — Imports `fraud_model_training.py`, `fraud_model_deploy.py`, and `fraud_model_run.py` from `./notebooks` into your workspace.
+2. **ML build** — Runs the training notebook then the deploy notebook (so the model is registered in Unity Catalog). By default uses **serverless compute** (no cluster ID needed). Optionally pass `--cluster-id` to use an existing cluster.
+3. **Dashboard** — Creates and publishes the Lakeview dashboard from `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`, with your catalog and schema applied to the datasets.
+
+**Example (serverless; no cluster):**
+```bash
+./deploy.sh -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <sql-warehouse-id>
+```
+
+**Example (with existing cluster):**
+```bash
+./deploy.sh -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id> --cluster-id <cluster-id>
+```
+
+**Example (non-interactive, serverless):**
+```bash
+./deploy.sh -y -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id>
+```
+
+**Options:** `--skip-ml` deploys only the notebooks (no training/deploy run). `--skip-dashboard` skips creating the dashboard. `--cluster-id` is optional (omit for serverless). Run `./deploy.sh --help` for all options.
+
+**Undeploy:** Run `undeploy.sh` to trash the dashboard (and optionally remove the workspace path with `--remove-workspace`). It does not unregister ML models or delete experiments.
+```bash
+./undeploy.sh -p myprofile
+./undeploy.sh -p myprofile --remove-workspace
+```
+
+The dashboard template lives in `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`; a copy remains in `sql/` for reference.
+
 # Setup - Base Data, Tables and Views
 
 File-based data from `./data` folder in this repo needs to be loaded to a Unity Catalog Volume.  This can be a UC *Managed Volume* (storage and setup managed within Databricks) or an *External Volume* (files stored in an external cloud storage bucket mapped to this volume).  
