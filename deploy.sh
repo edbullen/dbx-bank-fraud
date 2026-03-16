@@ -22,6 +22,7 @@ SKIP_NOTEBOOKS=false
 GENIE=false
 SERVE_MODEL=false
 ENDPOINT_NAME="bank-fraud-predict"
+MODEL_NAME="bank_fraud_predict"
 MODEL_VERSION=""   # empty = use production alias or latest version
 DASHBOARD_JSON="$ROOT/dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json"
 
@@ -33,16 +34,17 @@ Usage: deploy.sh [OPTIONS]
   --host HOST                 Workspace URL
   -c, --catalog CATALOG       Unity Catalog (for ML widgets and dashboard datasets)
   -s, --schema SCHEMA         Unity Schema (for ML widgets and dashboard datasets)
-  --workspace-path PATH       Workspace path for notebooks (e.g. /Users/you@example.com/dbx-bank-fraud)
-  --warehouse-id ID           SQL warehouse ID for the Lakeview dashboard (required for dashboard)
+  --workspace-path PATH       Workspace path for notebooks (required only when importing or running ML; use --skip-notebooks --skip-ml to omit)
+  --warehouse-id ID           SQL warehouse ID for the Lakeview dashboard (required only when creating dashboard or Genie)
   --cluster-id ID             Optional: existing cluster ID for ML notebooks; if omitted, uses serverless compute
   --skip-ml                   Do not run training or deploy notebooks (still imports if not --skip-notebooks)
-  --skip-notebooks            Do not import fraud_model* notebooks to workspace (dashboard-only deploy)
+  --skip-notebooks            Do not import fraud_model* notebooks to workspace (dashboard-only or serve-model-only deploy)
   --skip-dashboard            Do not create or publish the dashboard
   --genie                     Create a Genie space for gold_transactions (uses same warehouse as dashboard)
-  --serve-model               Create a model serving endpoint for the fraud model (requires model in UC)
-  --endpoint-name NAME        Name for the serving endpoint (default: bank-fraud-predict)
-  --model-version VER         Model version to serve (default: production alias, else latest)
+  --serve-model               Create a model serving endpoint (requires model in UC)
+  --endpoint-name NAME        Name of the serving endpoint in the workspace (default: bank-fraud-predict)
+  --model-name NAME           Unity Catalog model name to serve (default: bank_fraud_predict). Full name is catalog.schema.model_name
+  --model-version VER         Model version to serve (default: version with alias production, else latest)
   -y, --yes, --non-interactive  No prompts; fail if required params missing
   -i, --interactive           Prompt for missing params
   -h, --help                  Show this help and exit
@@ -68,6 +70,7 @@ while [[ $# -gt 0 ]]; do
     --genie)            GENIE=true; shift ;;
     --serve-model)      SERVE_MODEL=true; shift ;;
     --endpoint-name)    ENDPOINT_NAME="$2"; shift 2 ;;
+    --model-name)       MODEL_NAME="$2"; shift 2 ;;
     --model-version)    MODEL_VERSION="$2"; shift 2 ;;
     -y|--yes|--non-interactive) NON_INTERACTIVE=true; shift ;;
     -i|--interactive)   NON_INTERACTIVE=false; shift ;;
@@ -168,11 +171,14 @@ if ! $SKIP_ML; then
   fi
 fi
 
-if ! $SKIP_DASHBOARD; then
-  while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for dashboard)" "" WAREHOUSE_ID; done
-fi
-if $GENIE && [[ -z "$WAREHOUSE_ID" ]]; then
-  while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for Genie space)" "" WAREHOUSE_ID; done
+# warehouse-id when creating dashboard or Genie, but not in serve-model-only mode (--serve-model with --skip-notebooks --skip-ml)
+if ( (! $SKIP_DASHBOARD) || $GENIE ) && ! ( $SERVE_MODEL && $SKIP_NOTEBOOKS && $SKIP_ML ); then
+  if ! $SKIP_DASHBOARD; then
+    while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for dashboard)" "" WAREHOUSE_ID; done
+  fi
+  if $GENIE && [[ -z "$WAREHOUSE_ID" ]]; then
+    while ! require_param "warehouse-id" "$WAREHOUSE_ID"; do prompt_val "SQL warehouse ID (for Genie space)" "" WAREHOUSE_ID; done
+  fi
 fi
 
 # --- Deploy notebooks (fraud_model*) ---
@@ -261,7 +267,7 @@ fi
 # --- Model serving endpoint: create endpoint for UC model ---
 if $SERVE_MODEL; then
   echo "=== Creating model serving endpoint ==="
-  MODEL_FULL_NAME="$CATALOG.$SCHEMA.bank_fraud_predict"
+  MODEL_FULL_NAME="$CATALOG.$SCHEMA.$MODEL_NAME"
   VERSION_TO_SERVE="$MODEL_VERSION"
   if [[ -z "$VERSION_TO_SERVE" ]]; then
     ALIAS_OUT="$(dbx model-versions get-by-alias "$MODEL_FULL_NAME" production -o json 2>/dev/null)" || true
@@ -274,8 +280,8 @@ if $SERVE_MODEL; then
 import sys, json
 try:
     d = json.load(sys.stdin)
-    vers = d.get('model_versions') or d.get('versions') or []
-    if not vers and 'model_versions' in d: vers = d['model_versions']
+    vers = d if isinstance(d, list) else d.get('model_versions') or d.get('versions') or []
+    if not vers and isinstance(d, dict) and 'model_versions' in d: vers = d['model_versions']
     nums = []
     for v in vers:
         if not v: continue
@@ -340,8 +346,8 @@ PY
   fi
 fi
 
-# --- Dashboard: create from JSON and publish ---
-if ! $SKIP_DASHBOARD && [[ -f "$DASHBOARD_JSON" ]]; then
+# --- Dashboard: create from JSON and publish (only when we have a warehouse-id) ---
+if ! $SKIP_DASHBOARD && [[ -f "$DASHBOARD_JSON" ]] && [[ -n "$WAREHOUSE_ID" ]]; then
   echo "=== Creating and publishing dashboard ==="
   DASH_TMP="$(mktemp)"
   REQ_TMP="$(mktemp)"

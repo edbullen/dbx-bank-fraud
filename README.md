@@ -83,7 +83,25 @@ After the base data and tables are in place (e.g. via `create.sh`), use `deploy.
 ./deploy.sh -y -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id> --serve-model
 ```
 
-**Options:** `--skip-ml` deploys only the notebooks (no training/deploy run). `--skip-dashboard` skips creating the dashboard. `--genie` creates a Genie space for the `gold_transactions` view (warehouse ID required when using `--genie`). `--serve-model` creates a model serving endpoint for the fraud model (uses the UC model `bank_fraud_predict`; by default the version with alias `production` or the latest version). `--endpoint-name` and `--model-version` customize the endpoint name and model version. `--cluster-id` is optional (omit for serverless). Run `./deploy.sh --help` for all options.
+**Example (serve-model only; no workspace-path or warehouse-id):**
+```bash
+./deploy.sh -y -p myprofile -c my_catalog -s my_schema --skip-notebooks --skip-ml --serve-model
+```
+
+**Options:**  
++ `--skip-ml` — do not run training or deploy notebooks.  
++ `--skip-dashboard` — do not create the dashboard.  
++ `--skip-notebooks` — do not import notebooks (e.g. dashboard-only or serve-model-only).  
++ `--genie` — create a Genie space for `gold_transactions` (warehouse ID required when using `--genie`).  
++ `--cluster-id` — optional; omit for serverless.  
++ For deploy types that only create the dashboard or serving endpoint, use `--skip-notebooks --skip-ml`; then `--workspace-path` and (for serve-model-only) `--warehouse-id` are not required.
+
+**Model serving** (when using `--serve-model`):  
++ **Endpoint name:** `--endpoint-name` (default `bank-fraud-predict`) is the name of the serving endpoint in the workspace.  
++ **Model name:** `--model-name` (default `bank_fraud_predict`) is the Unity Catalog model name; full name is `catalog.schema.model_name`.  
++ **Version:** Omit `--model-version` to use the version with alias `production`, or if none, the latest version.
+
+Run `./deploy.sh --help` for all options.  
 
 **Undeploy:** Run `undeploy.sh` to trash the dashboard, any Genie space, and the model serving endpoint created by deploy (and optionally remove the workspace path with `--remove-workspace`). It does not unregister ML models or delete experiments.
 ```bash
