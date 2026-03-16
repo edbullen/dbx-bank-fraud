@@ -20,7 +20,7 @@ unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
 print(f"Unity Catalog: {unity_catalog}, Unity Schema: {unity_schema} ")
-spark.sql(f"USE {unity_catalog}.{unity_schema}")
+spark.sql(f"USE `{unity_catalog}`.`{unity_schema}`")
 
 # COMMAND ----------
 
@@ -85,5 +85,5 @@ predicted_df.createOrReplaceTempView("predictions_view")
 
 # COMMAND ----------
 
-# DBTITLE 1,Write the Data out to CSV in a Unity Catalog volume called output
-predicted_df.coalesce(1).write.mode('overwrite').option('header', 'true').csv(f"/Volumes/{unity_catalog}/{unity_schema}/bank-fraud/retail/fraud_predictions")
+# DBTITLE 1,Write the Data out to CSV in a Unity Catalog volume called batch-predictions
+predicted_df.coalesce(1).write.mode('overwrite').option('header', 'true').csv(f"/Volumes/{unity_catalog}/{unity_schema}/batch-predictions/retail-fraud")
