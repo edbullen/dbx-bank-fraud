@@ -20,7 +20,7 @@ unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
 print(f"Unity Catalog: {unity_catalog}, Unity Schema: {unity_schema} ")
-spark.sql(f"USE {unity_catalog}.{unity_schema}")
+spark.sql(f"USE `{unity_catalog}`.`{unity_schema}`")
 
 # COMMAND ----------
 
@@ -29,6 +29,7 @@ import mlflow.sklearn
 mlflow.set_registry_uri('databricks-uc') 
 
 # reference to the model in Unity Catalog, pick the version that has been labeled in Unity Catalog with an alias "production"
+# Don't use backticks here, use the full model URI format.
 model_version_uri = f"models:/{unity_catalog}.{unity_schema}.bank_fraud_predict@production"
 
 # load the model
@@ -76,14 +77,14 @@ display(predicted_df.groupBy(['is_fraud']).count())
 predicted_df.createOrReplaceTempView("predictions_view")
 
 #Create a managed Delta table in the catalog
-#spark.sql(f"""CREATE OR REPLACE TABLE {unity_catalog}.{unity_schema}.fraud_predictions 
+#spark.sql(f"""CREATE OR REPLACE TABLE `{unity_catalog}`.`{unity_schema}`.fraud_predictions 
 #          AS SELECT * FROM  predictions_view """)
 # Update the target table lineage with MLflow information
-#spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions  
+#spark.sql(f"""ALTER TABLE `{unity_catalog}`.`{unity_schema}`.fraud_predictions  
 #          SET TBLPROPERTIES ('mlflow_experiment_name'='{experiment_name}', 'mlflow_model_uri'='{model_version_uri}')""")
 
 
 # COMMAND ----------
 
-# DBTITLE 1,Write the Data out to CSV in a Unity Catalog volume called output
-predicted_df.coalesce(1).write.mode('overwrite').option('header', 'true').csv(f"/Volumes/{unity_catalog}/{unity_schema}/bank-fraud/retail/fraud_predictions")
+# DBTITLE 1,Write the Data out to CSV in a Unity Catalog volume called batch-predictions
+predicted_df.coalesce(1).write.mode('overwrite').option('header', 'true').csv(f"/Volumes/{unity_catalog}/{unity_schema}/batch-predictions/retail-fraud")

@@ -21,7 +21,7 @@ unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
 print(f"Unity Catalog: {unity_catalog}, Unity Schema: {unity_schema} ")
-spark.sql(f"USE {unity_catalog}.{unity_schema}")
+spark.sql(f"USE `{unity_catalog}`.`{unity_schema}`")
 
 # COMMAND ----------
 
@@ -53,6 +53,7 @@ print(f"MLFlow Experiment name is {experiment_name}")
 # Set MLflow to use Unity Catalog
 import mlflow
 mlflow.set_registry_uri("databricks-uc")
+# Don't use backticks here, use the full model URI format.
 model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 
 # COMMAND ----------
