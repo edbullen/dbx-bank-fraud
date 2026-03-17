@@ -60,7 +60,7 @@ For full options run:
 After the base data and tables are in place (e.g. via `create.sh`), use `deploy.sh` to deploy and **build** the ML artefacts and the Retail Bank Fraud dashboard:
 
 1. **Notebooks** — Imports `fraud_model_training.py`, `fraud_model_deploy.py`, and `fraud_model_run.py` from `./notebooks` into your workspace.
-2. **ML build** — Runs the training notebook then the deploy notebook (so the model is registered in Unity Catalog). By default uses **serverless compute** (no cluster ID needed). Optionally pass `--cluster-id` to use an existing cluster.
+2. **ML build** — Runs the training notebook then the deploy notebook (so the model is registered in Unity Catalog). By default uses **serverless compute** (no cluster ID needed). Optionally pass `--cluster-id` to use an existing cluster. If a notebook run fails, the script prints the run ID and fetches the run output; you can also run `databricks -p <profile> jobs get-run-output <run_id>` to view error details.
 3. **Dashboard** — Creates and publishes the Lakeview dashboard from `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`, with your catalog and schema applied to the datasets.
 
 **Example (serverless; no cluster):**

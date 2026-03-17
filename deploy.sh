@@ -248,8 +248,57 @@ SUB
 }
 SUB
     fi
-    dbx jobs submit --json @"$json_file" --timeout 30m
+    local submit_out
+    submit_out="$(dbx jobs submit --json @"$json_file" -o json --no-wait 2>/dev/null)" || true
     rm -f "$json_file"
+    local run_id
+    run_id="$(echo "$submit_out" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('run_id',''))" 2>/dev/null)"
+    if [[ -z "$run_id" ]]; then
+      echo "Error: Failed to submit notebook run (no run_id). Check CLI and workspace access."
+      exit 1
+    fi
+    echo "Run ID: $run_id (if this run fails, view error output with: databricks -p $PROFILE jobs get-run-output $run_id)"
+    local state="" result_state="" deadline
+    deadline=$(($(date +%s) + 1800))   # 30 min
+    while [[ $(date +%s) -lt $deadline ]]; do
+      local run_json
+      run_json="$(dbx jobs get-run "$run_id" -o json 2>/dev/null)" || true
+      state="$(echo "$run_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+s=d.get('state') or d.get('run_state') or {}
+print(s.get('life_cycle_state') or d.get('life_cycle_state') or '')
+" 2>/dev/null)"
+      result_state="$(echo "$run_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+s=d.get('state') or d.get('run_state') or {}
+print(s.get('result_state') or s.get('state_message') or '')
+" 2>/dev/null)"
+      [[ -z "$state" ]] && state="UNKNOWN"
+      if [[ "$state" == "TERMINATED" || "$state" == "SKIPPED" ]]; then
+        if [[ "$result_state" == "FAILED" || "$result_state" == "INTERNAL_ERROR" ]]; then
+          echo "Run failed (state: $state, result: $result_state). Fetching run output:"
+          echo "---"
+          dbx jobs get-run-output "$run_id" 2>/dev/null || true
+          echo "---"
+          echo "To view full run details: databricks -p $PROFILE jobs get-run $run_id"
+          exit 1
+        fi
+        return 0
+      fi
+      if [[ "$state" == "INTERNAL_ERROR" || "$state" == "FAILED" ]]; then
+        echo "Run failed (state: $state). Fetching run output:"
+        echo "---"
+        dbx jobs get-run-output "$run_id" 2>/dev/null || true
+        echo "---"
+        echo "To view full run details: databricks -p $PROFILE jobs get-run $run_id"
+        exit 1
+      fi
+      sleep 15
+    done
+    echo "Error: Run did not complete within 30 minutes (last state: $state). View output: databricks -p $PROFILE jobs get-run-output $run_id"
+    exit 1
   }
 
   if [[ -n "$CLUSTER_ID" ]]; then
@@ -257,7 +306,7 @@ SUB
   else
     echo "=== Using serverless compute (no cluster specified) ==="
   fi
-  echo "=== Running fraud_model_training notebook ==="
+  echo "=== Running fraud_model_training notebook (** expect 20 to 30 minutes to complete **) ==="
   submit_notebook "$TRAIN_PATH" "fraud-model-training"
 
   echo "=== Running fraud_model_deploy notebook ==="

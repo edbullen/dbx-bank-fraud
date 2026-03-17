@@ -28,7 +28,7 @@ unity_catalog = dbutils.widgets.get("unity_catalog")
 unity_schema = dbutils.widgets.get("unity_schema")
 
 print(f"Unity Catalog: {unity_catalog}, Unity Schema: {unity_schema} ")
-spark.sql(f"USE {unity_catalog}.{unity_schema}")
+spark.sql(f"USE `{unity_catalog}`.`{unity_schema}`")
 
 # COMMAND ----------
 
@@ -49,7 +49,7 @@ print(f"current_user var set to {current_user}")
 # Set MLflow to use Unity Catalog
 import mlflow
 mlflow.set_registry_uri("databricks-uc")
-
+# Don't use backticks here, use the full model URI format.
 model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 
 # COMMAND ----------
@@ -62,10 +62,10 @@ model_registry_name = f"{unity_catalog}.{unity_schema}.bank_fraud_predict"
 # DBTITLE 1,Load Data
 import mlflow
 
-table_fqn = f"{unity_catalog}.{unity_schema}.gold_transactions"
+table_fqn = f"`{unity_catalog}`.`{unity_schema}`.gold_transactions"
 
 # Create an MLflow SparkDataset whose source is the UC Delta table
-train_ds = mlflow.data.load_delta(table_name=table_fqn, profile=None)   # SparkDataset
+train_ds = mlflow.data.load_delta(table_name=table_fqn)   # SparkDataset
 base_df = train_ds.df                                     # Spark DataFrame
 
 # Keep the existing projection logic (Spark-side)

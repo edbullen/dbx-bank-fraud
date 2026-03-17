@@ -29,6 +29,7 @@ import mlflow.sklearn
 mlflow.set_registry_uri('databricks-uc') 
 
 # reference to the model in Unity Catalog, pick the version that has been labeled in Unity Catalog with an alias "production"
+# Don't use backticks here, use the full model URI format.
 model_version_uri = f"models:/{unity_catalog}.{unity_schema}.bank_fraud_predict@production"
 
 # load the model
@@ -76,10 +77,10 @@ display(predicted_df.groupBy(['is_fraud']).count())
 predicted_df.createOrReplaceTempView("predictions_view")
 
 #Create a managed Delta table in the catalog
-#spark.sql(f"""CREATE OR REPLACE TABLE {unity_catalog}.{unity_schema}.fraud_predictions 
+#spark.sql(f"""CREATE OR REPLACE TABLE `{unity_catalog}`.`{unity_schema}`.fraud_predictions 
 #          AS SELECT * FROM  predictions_view """)
 # Update the target table lineage with MLflow information
-#spark.sql(f"""ALTER TABLE {unity_catalog}.{unity_schema}.fraud_predictions  
+#spark.sql(f"""ALTER TABLE `{unity_catalog}`.`{unity_schema}`.fraud_predictions  
 #          SET TBLPROPERTIES ('mlflow_experiment_name'='{experiment_name}', 'mlflow_model_uri'='{model_version_uri}')""")
 
 
