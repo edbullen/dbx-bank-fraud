@@ -49,7 +49,7 @@ Usage: deploy.sh [OPTIONS]
   -i, --interactive           Prompt for missing params
   -h, --help                  Show this help and exit
 
-Deploys: fraud_model_training.py, fraud_model_deploy.py (and fraud_model_run.py) to workspace,
+Deploys: fraud_model_training.py, fraud_model_deploy.py, fraud_model_run.py, fraud_model_query.ipynb to workspace,
 runs training then deploy to build the model in UC; creates and publishes the Retail Bank Fraud
 dashboard from dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json.
 EOF
@@ -185,10 +185,14 @@ fi
 if ! $SKIP_NOTEBOOKS; then
   echo "=== Deploying fraud_model* notebooks to workspace ==="
   NOTES_DIR="$ROOT/notebooks"
-  for f in fraud_model_training fraud_model_deploy fraud_model_run; do
-    src="$NOTES_DIR/${f}.py"
-    if [[ -f "$src" ]]; then
-      dbx workspace import "$WORKSPACE_PATH/notebooks/$f" --file "$src" --language PYTHON --format SOURCE --overwrite
+  for f in fraud_model_training fraud_model_deploy fraud_model_run fraud_model_query; do
+    src_py="$NOTES_DIR/${f}.py"
+    src_ipynb="$NOTES_DIR/${f}.ipynb"
+    if [[ -f "$src_py" ]]; then
+      dbx workspace import "$WORKSPACE_PATH/notebooks/$f" --file "$src_py" --language PYTHON --format SOURCE --overwrite
+      echo "Imported $f"
+    elif [[ -f "$src_ipynb" ]]; then
+      dbx workspace import "$WORKSPACE_PATH/notebooks/$f" --file "$src_ipynb" --format JUPYTER --overwrite
       echo "Imported $f"
     fi
   done
