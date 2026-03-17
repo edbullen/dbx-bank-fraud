@@ -4,7 +4,7 @@ Ingest multiple data-sources and join them to analyze simulated bank fraud trans
 
 The dataset is based on the [PaySim](https://www.msc-les.org/proceedings/emss/2016/EMSS2016_249.pdf),  dataset (GitHub [repo](https://github.com/EdgarLopezPhD/PaySim) and [LICENSE](https://github.com/EdgarLopezPhD/PaySim/blob/master/LICENSE) for more details). The Databricks demo version augmented this dataset to introduce simulated geo-data as well.  The Databricks version of this data has a [LICENCE](https://github.com/databricks-demos/dbdemos-dataset/blob/main/LICENSE) for use.
 
-Dashboard  
+![Dashboard](./doc/dashboard_example.png)
 
 ## Data Schema
 
@@ -29,6 +29,7 @@ The Databricks CLI profiles are configured in `~/.databrickscfg`.
 in order  to make sure they get executed against the correct workspace.
 
 # Quick-start deployment
+## 1. Raw Data, Volumes, Tables and Views
 
 Use the `create.sh` and `destroy.sh` scripts to deploy or tear down the demo from the repo root. They support both **non-interactive** (one-shot, suitable for CI or AI agents) and **interactive** (step-by-step prompts) modes.
 
@@ -59,7 +60,7 @@ For full options run:
 - `./create.sh --help`
 - `./destroy.sh --help`
 
-# Deploy ML and dashboard
+## 2. Deploy Notebooks, ML Model, Serving Endpoint and Dashboard
 
 After the base data and tables are in place (e.g. via `create.sh`), use `deploy.sh` to deploy and **build** the ML artefacts and the Retail Bank Fraud dashboard:
 
@@ -133,7 +134,10 @@ Run `./deploy.sh --help` for all options.
 
 The dashboard template lives in `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`; a copy remains in `sql/` for reference.
 
-# Setup - Base Data, Tables and Views
+.   
+.     
+.
+# Manual Setup Notes - Base Data, Tables and Views
 
 File-based data from `./data` folder in this repo needs to be loaded to a Unity Catalog Volume.  This can be a UC *Managed Volume* (storage and setup managed within Databricks) or an *External Volume* (files stored in an external cloud storage bucket mapped to this volume).  
 
