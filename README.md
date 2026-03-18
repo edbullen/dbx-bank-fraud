@@ -115,7 +115,7 @@ databricks -p myprofile registered-models set-alias <catalog>.<schema>.bank_frau
 - `--skip-notebooks` — do not import notebooks (e.g. dashboard-only or serve-model-only).  
 - `--genie` — create a Genie space for `gold_transactions` (warehouse ID required when using `--genie`).  
 - `--cluster-id` — optional; omit for serverless.  
-- For deploy types that only create the dashboard or serving endpoint, use `--skip-notebooks --skip-ml`; then `--workspace-path` and (for serve-model-only) `--warehouse-id` are not required.
+- For deploy types that only create the dashboard or `--serve-model` fraud endpoint, use `--skip-notebooks --skip-ml`; then `--workspace-path` and (for serve-model-only) `--warehouse-id` are not required. **`--deploy-agent` always needs `--workspace-path`.**
 
 **Model serving** (when using `--serve-model`):  
 
@@ -134,9 +134,26 @@ Run `./deploy.sh --help` for all options.
 
 The dashboard template lives in `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`; a copy remains in `sql/` for reference.
 
-.   
-.     
-.
+## 3. Deploy UC Function + AI Chat Agent using UC Function tool
+
++ Create the UC function `explain_transaction_risk()`  
++ Register the UC model **`fraud_model_explain`** (LangChain + `ChatDatabricks` + foundation LLM)  
++ Serve it as a model serving endpoint (default name via deploy: **`bank-fraud-explain`** — hyphens; UC model uses underscores)
+
+**Automated run** (assumes agent notebooks are already in the workspace, or omit `--skip-notebooks` to import everything first):
+
+```bash
+./deploy.sh -y -p myprofile -c my_catalog -s my_schema \
+  --workspace-path /Users/you@example.com/dbx-bank-fraud \
+  --skip-notebooks --skip-ml --skip-dashboard \
+  --deploy-agent
+```
+
+** NOTE ** allow up to 20 minutes after the register and deploy agent has completed.  It takes a while for the serving endpoint to come on-line.   
+
+Optional: `--llm-endpoint <name>` (default `databricks-gpt-5-2`), `--agent-serving-endpoint-name <name>` (default `bank-fraud-explain`), `--agent-register-timeout <seconds>` (default `5400` for the register/deploy notebook). Uses serverless compute unless you pass `--cluster-id`.
+
+---
 # Manual Setup Notes - Base Data, Tables and Views
 
 File-based data from `./data` folder in this repo needs to be loaded to a Unity Catalog Volume.  This can be a UC *Managed Volume* (storage and setup managed within Databricks) or an *External Volume* (files stored in an external cloud storage bucket mapped to this volume).  
