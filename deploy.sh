@@ -25,6 +25,11 @@ ENDPOINT_NAME="bank-fraud-predict"
 MODEL_NAME="bank_fraud_predict"
 MODEL_VERSION=""   # empty = use production alias or latest version
 DASHBOARD_JSON="$ROOT/dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json"
+DEPLOY_AGENT=false
+LLM_ENDPOINT="databricks-gpt-5-2"
+AGENT_SERVING_ENDPOINT_NAME="bank-fraud-explain"
+AGENT_NB1_TIMEOUT=1800    # Create UC function
+AGENT_NB2_TIMEOUT=5400    # Register + agents.deploy (pip, MLflow, serving)
 
 usage() {
   cat <<'EOF'
@@ -34,7 +39,7 @@ Usage: deploy.sh [OPTIONS]
   --host HOST                 Workspace URL
   -c, --catalog CATALOG       Unity Catalog (for ML widgets and dashboard datasets)
   -s, --schema SCHEMA         Unity Schema (for ML widgets and dashboard datasets)
-  --workspace-path PATH       Workspace path for notebooks (required only when importing or running ML; use --skip-notebooks --skip-ml to omit)
+  --workspace-path PATH       Workspace path for notebooks (required when importing/running ML or --deploy-agent)
   --warehouse-id ID           SQL warehouse ID for the Lakeview dashboard (required only when creating dashboard or Genie)
   --cluster-id ID             Optional: existing cluster ID for ML notebooks; if omitted, uses serverless compute
   --skip-ml                   Do not run training or deploy notebooks (still imports if not --skip-notebooks)
@@ -45,13 +50,18 @@ Usage: deploy.sh [OPTIONS]
   --endpoint-name NAME        Name of the serving endpoint in the workspace (default: bank-fraud-predict)
   --model-name NAME           Unity Catalog model name to serve (default: bank_fraud_predict). Full name is catalog.schema.model_name
   --model-version VER         Model version to serve (default: version with alias production, else latest)
+  --deploy-agent              Run agent notebooks: 1) Create UC function 2) Register + serve agent (needs workspace-path; notebooks must exist if --skip-notebooks)
+  --llm-endpoint NAME         LLM serving endpoint for ChatDatabricks (default: databricks-gpt-5-2); used with --deploy-agent
+  --agent-serving-endpoint-name NAME  Agent serving endpoint name (default: bank-fraud-explain); used with --deploy-agent
+  --agent-register-timeout SEC  Max seconds to wait for Register Agent notebook (default: 5400)
   -y, --yes, --non-interactive  No prompts; fail if required params missing
   -i, --interactive           Prompt for missing params
   -h, --help                  Show this help and exit
 
-Deploys: fraud_model_training.py, fraud_model_deploy.py, fraud_model_run.py, fraud_model_query.ipynb to workspace,
+Deploys: fraud_model_* notebooks and notebooks/agent (3 notebooks) to workspace,
 runs training then deploy to build the model in UC; creates and publishes the Retail Bank Fraud
 dashboard from dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json.
+With --deploy-agent, runs notebooks/agent/1 then 2 to create explain_transaction_risk and deploy the LangChain agent.
 EOF
 }
 
@@ -72,6 +82,10 @@ while [[ $# -gt 0 ]]; do
     --endpoint-name)    ENDPOINT_NAME="$2"; shift 2 ;;
     --model-name)       MODEL_NAME="$2"; shift 2 ;;
     --model-version)    MODEL_VERSION="$2"; shift 2 ;;
+    --deploy-agent)     DEPLOY_AGENT=true; shift ;;
+    --llm-endpoint)     LLM_ENDPOINT="$2"; shift 2 ;;
+    --agent-serving-endpoint-name) AGENT_SERVING_ENDPOINT_NAME="$2"; shift 2 ;;
+    --agent-register-timeout) AGENT_NB2_TIMEOUT="$2"; shift 2 ;;
     -y|--yes|--non-interactive) NON_INTERACTIVE=true; shift ;;
     -i|--interactive)   NON_INTERACTIVE=false; shift ;;
     -h|--help)          usage; exit 0 ;;
@@ -110,6 +124,101 @@ prompt_val() {
   read -r -p "$prompt: " input
   [[ -z "$input" && -n "$default" ]] && input="$default"
   printf -v "$var_ref" '%s' "$input"
+}
+
+# Write one-task notebook job JSON; agent_register=1 adds llm_endpoint + serving_endpoint_name widgets.
+_write_notebook_job_json() {
+  local out="$1" path="$2" run_name="$3" agent_register="$4"
+  NB_JSON_OUT="$out" NB_JOB_PATH="$path" NB_RUN_NAME="$run_name" \
+  AGENT_REGISTER="$agent_register" \
+  CATALOG="$CATALOG" SCHEMA="$SCHEMA" CLUSTER_ID="${CLUSTER_ID:-}" \
+  LLM_ENDPOINT="$LLM_ENDPOINT" AGENT_SERVING_ENDPOINT_NAME="$AGENT_SERVING_ENDPOINT_NAME" \
+  python3 <<'PY'
+import json, os
+path = os.environ["NB_JOB_PATH"]
+params = {
+    "unity_catalog": os.environ["CATALOG"],
+    "unity_schema": os.environ["SCHEMA"],
+}
+if os.environ.get("AGENT_REGISTER") == "1":
+    params["llm_endpoint"] = os.environ["LLM_ENDPOINT"]
+    params["serving_endpoint_name"] = os.environ["AGENT_SERVING_ENDPOINT_NAME"]
+task = {
+    "task_key": "main",
+    "notebook_task": {"notebook_path": path, "base_parameters": params},
+}
+cid = (os.environ.get("CLUSTER_ID") or "").strip()
+if cid:
+    task["existing_cluster_id"] = cid
+job = {"run_name": os.environ["NB_RUN_NAME"], "tasks": [task]}
+with open(os.environ["NB_JSON_OUT"], "w") as f:
+    json.dump(job, f)
+PY
+}
+
+_wait_for_run() {
+  local run_id="$1"
+  local timeout_sec="$2"
+  local state="" result_state="" deadline
+  deadline=$(($(date +%s) + timeout_sec))
+  echo "Run ID: $run_id (timeout ${timeout_sec}s; on failure: databricks -p $PROFILE jobs get-run-output $run_id)"
+  while [[ $(date +%s) -lt $deadline ]]; do
+    local run_json
+    run_json="$(dbx jobs get-run "$run_id" -o json 2>/dev/null)" || true
+    state="$(echo "$run_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+s=d.get('state') or d.get('run_state') or {}
+print(s.get('life_cycle_state') or d.get('life_cycle_state') or '')
+" 2>/dev/null)"
+    result_state="$(echo "$run_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+s=d.get('state') or d.get('run_state') or {}
+print(s.get('result_state') or s.get('state_message') or '')
+" 2>/dev/null)"
+    [[ -z "$state" ]] && state="UNKNOWN"
+    if [[ "$state" == "TERMINATED" || "$state" == "SKIPPED" ]]; then
+      if [[ "$result_state" == "FAILED" || "$result_state" == "INTERNAL_ERROR" ]]; then
+        echo "Run failed (state: $state, result: $result_state). Output:"
+        echo "---"
+        dbx jobs get-run-output "$run_id" 2>/dev/null || true
+        echo "---"
+        exit 1
+      fi
+      return 0
+    fi
+    if [[ "$state" == "INTERNAL_ERROR" || "$state" == "FAILED" ]]; then
+      echo "Run failed (state: $state). Output:"
+      echo "---"
+      dbx jobs get-run-output "$run_id" 2>/dev/null || true
+      echo "---"
+      exit 1
+    fi
+    sleep 15
+  done
+  echo "Error: Run did not complete within ${timeout_sec}s (last state: $state). databricks -p $PROFILE jobs get-run-output $run_id"
+  exit 1
+}
+
+_submit_and_wait_notebook() {
+  local notebook_path="$1"
+  local run_name="$2"
+  local timeout_sec="$3"
+  local agent_register="${4:-0}"
+  local json_file
+  json_file="$(mktemp)"
+  _write_notebook_job_json "$json_file" "$notebook_path" "$run_name" "$agent_register"
+  local submit_out
+  submit_out="$(dbx jobs submit --json @"$json_file" -o json --no-wait 2>/dev/null)" || true
+  rm -f "$json_file"
+  local run_id
+  run_id="$(echo "$submit_out" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('run_id',''))" 2>/dev/null)"
+  if [[ -z "$run_id" ]]; then
+    echo "Error: Failed to submit notebook run (no run_id): $run_name"
+    exit 1
+  fi
+  _wait_for_run "$run_id" "$timeout_sec"
 }
 
 # --- Auth ---
@@ -159,12 +268,12 @@ export DATABRICKS_CONFIG_PROFILE="$PROFILE"
 
 while ! require_param "catalog" "$CATALOG"; do prompt_val "Unity Catalog name" "" CATALOG; done
 while ! require_param "schema" "$SCHEMA"; do prompt_val "Unity Schema name" "" SCHEMA; done
-# workspace-path required only when deploying notebooks or running ML (need notebook paths)
-if ! $SKIP_NOTEBOOKS || ! $SKIP_ML; then
+# workspace-path when importing/running ML or --deploy-agent
+if ! $SKIP_NOTEBOOKS || ! $SKIP_ML || $DEPLOY_AGENT; then
   while ! require_param "workspace-path" "$WORKSPACE_PATH"; do prompt_val "Workspace path for notebooks (e.g. /Users/you@example.com/dbx-bank-fraud)" "" WORKSPACE_PATH; done
 fi
 
-if ! $SKIP_ML; then
+if ! $SKIP_ML || $DEPLOY_AGENT; then
   # cluster-id is optional; when empty we use serverless compute (no prompt required)
   if [[ -z "$CLUSTER_ID" ]] && ! $NON_INTERACTIVE; then
     read -r -p "Existing cluster ID (optional; press Enter for serverless compute): " CLUSTER_ID
@@ -196,6 +305,25 @@ if ! $SKIP_NOTEBOOKS; then
       echo "Imported $f"
     fi
   done
+  # Deploy notebooks/agent folder (3 notebooks)
+  AGENTS_DIR="$NOTES_DIR/agent"
+  if [[ -d "$AGENTS_DIR" ]]; then
+    echo "=== Deploying notebooks/agent to workspace ==="
+    dbx workspace mkdirs "$WORKSPACE_PATH/notebooks/agent" 2>/dev/null || true
+    for src in "$AGENTS_DIR"/*.ipynb "$AGENTS_DIR"/*.py; do
+      [[ -f "$src" ]] || continue
+      base="$(basename "$src" .ipynb)"
+      base="${base%.py}"
+      # Workspace path: notebooks/agent/<name> (name may contain spaces)
+      ws_path="$WORKSPACE_PATH/notebooks/agent/$base"
+      if [[ "$src" == *.ipynb ]]; then
+        dbx workspace import "$ws_path" --file "$src" --format JUPYTER --overwrite
+      else
+        dbx workspace import "$ws_path" --file "$src" --language PYTHON --format SOURCE --overwrite
+      fi
+      echo "Imported agent/$base"
+    done
+  fi
 else
   echo "=== Skipping notebook import (--skip-notebooks) ==="
 fi
@@ -205,116 +333,32 @@ if ! $SKIP_ML; then
   TRAIN_PATH="$WORKSPACE_PATH/notebooks/fraud_model_training"
   DEPLOY_PATH="$WORKSPACE_PATH/notebooks/fraud_model_deploy"
 
-  submit_notebook() {
-    local path="$1"
-    local run_name="$2"
-    local json_file
-    json_file="$(mktemp)"
-    if [[ -n "$CLUSTER_ID" ]]; then
-      # Use existing all-purpose cluster
-      cat <<SUB >"$json_file"
-{
-  "run_name": "$run_name",
-  "tasks": [
-    {
-      "task_key": "main",
-      "notebook_task": {
-        "notebook_path": "$path",
-        "base_parameters": {
-          "unity_catalog": "$CATALOG",
-          "unity_schema": "$SCHEMA"
-        }
-      },
-      "existing_cluster_id": "$CLUSTER_ID"
-    }
-  ]
-}
-SUB
-    else
-      # Serverless compute: omit cluster so the platform uses serverless by default
-      # (supported for notebook tasks when Unity Catalog is enabled).
-      # If your workspace requires explicit compute, use --cluster-id with an existing cluster.
-      cat <<SUB >"$json_file"
-{
-  "run_name": "$run_name",
-  "tasks": [
-    {
-      "task_key": "main",
-      "notebook_task": {
-        "notebook_path": "$path",
-        "base_parameters": {
-          "unity_catalog": "$CATALOG",
-          "unity_schema": "$SCHEMA"
-        }
-      }
-    }
-  ]
-}
-SUB
-    fi
-    local submit_out
-    submit_out="$(dbx jobs submit --json @"$json_file" -o json --no-wait 2>/dev/null)" || true
-    rm -f "$json_file"
-    local run_id
-    run_id="$(echo "$submit_out" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('run_id',''))" 2>/dev/null)"
-    if [[ -z "$run_id" ]]; then
-      echo "Error: Failed to submit notebook run (no run_id). Check CLI and workspace access."
-      exit 1
-    fi
-    echo "Run ID: $run_id (if this run fails, view error output with: databricks -p $PROFILE jobs get-run-output $run_id)"
-    local state="" result_state="" deadline
-    deadline=$(($(date +%s) + 1800))   # 30 min
-    while [[ $(date +%s) -lt $deadline ]]; do
-      local run_json
-      run_json="$(dbx jobs get-run "$run_id" -o json 2>/dev/null)" || true
-      state="$(echo "$run_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-s=d.get('state') or d.get('run_state') or {}
-print(s.get('life_cycle_state') or d.get('life_cycle_state') or '')
-" 2>/dev/null)"
-      result_state="$(echo "$run_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-s=d.get('state') or d.get('run_state') or {}
-print(s.get('result_state') or s.get('state_message') or '')
-" 2>/dev/null)"
-      [[ -z "$state" ]] && state="UNKNOWN"
-      if [[ "$state" == "TERMINATED" || "$state" == "SKIPPED" ]]; then
-        if [[ "$result_state" == "FAILED" || "$result_state" == "INTERNAL_ERROR" ]]; then
-          echo "Run failed (state: $state, result: $result_state). Fetching run output:"
-          echo "---"
-          dbx jobs get-run-output "$run_id" 2>/dev/null || true
-          echo "---"
-          echo "To view full run details: databricks -p $PROFILE jobs get-run $run_id"
-          exit 1
-        fi
-        return 0
-      fi
-      if [[ "$state" == "INTERNAL_ERROR" || "$state" == "FAILED" ]]; then
-        echo "Run failed (state: $state). Fetching run output:"
-        echo "---"
-        dbx jobs get-run-output "$run_id" 2>/dev/null || true
-        echo "---"
-        echo "To view full run details: databricks -p $PROFILE jobs get-run $run_id"
-        exit 1
-      fi
-      sleep 15
-    done
-    echo "Error: Run did not complete within 30 minutes (last state: $state). View output: databricks -p $PROFILE jobs get-run-output $run_id"
-    exit 1
-  }
-
   if [[ -n "$CLUSTER_ID" ]]; then
     echo "=== Using existing cluster: $CLUSTER_ID ==="
   else
     echo "=== Using serverless compute (no cluster specified) ==="
   fi
   echo "=== Running fraud_model_training notebook (** expect 20 to 30 minutes to complete **) ==="
-  submit_notebook "$TRAIN_PATH" "fraud-model-training"
+  _submit_and_wait_notebook "$TRAIN_PATH" "fraud-model-training" 1800 0
 
   echo "=== Running fraud_model_deploy notebook ==="
-  submit_notebook "$DEPLOY_PATH" "fraud-model-deploy"
+  _submit_and_wait_notebook "$DEPLOY_PATH" "fraud-model-deploy" 1800 0
+fi
+
+# --- UC function + LangChain agent (notebooks/agent 1 then 2) ---
+if $DEPLOY_AGENT; then
+  AGENT_NB1="$WORKSPACE_PATH/notebooks/agent/1. Create Function"
+  AGENT_NB2="$WORKSPACE_PATH/notebooks/agent/2. Register Agent"
+  if [[ -n "$CLUSTER_ID" ]]; then
+    echo "=== Agent deploy pipeline: cluster $CLUSTER_ID ==="
+  else
+    echo "=== Agent deploy pipeline: serverless compute ==="
+  fi
+  echo "=== Running agent notebook: Create UC function (explain_transaction_risk) ==="
+  _submit_and_wait_notebook "$AGENT_NB1" "agent-create-function" "$AGENT_NB1_TIMEOUT" 0
+  echo "=== Running agent notebook: Register + deploy agent (long run; timeout ${AGENT_NB2_TIMEOUT}s) ==="
+  _submit_and_wait_notebook "$AGENT_NB2" "agent-register-deploy" "$AGENT_NB2_TIMEOUT" 1
+  echo "=== Agent deploy pipeline finished ==="
 fi
 
 # --- Model serving endpoint: create endpoint for UC model ---
