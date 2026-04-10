@@ -5,3 +5,6 @@ local/*
 __pycache__/
 *.py[cod]
 .deploy-state.json
+app/.env
+app/frontend/node_modules/
+app/frontend/dist/

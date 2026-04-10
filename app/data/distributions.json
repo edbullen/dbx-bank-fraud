@@ -1,0 +1,1104 @@
+{
+  "metadata": {
+    "catalog": "hsbc_fraud_ai_ml_catalog",
+    "schema": "retail-bank",
+    "table": "gold_transactions",
+    "profiled_at": "2026-04-10T13:52:55Z"
+  },
+  "overall": {
+    "total_transactions": 5686801,
+    "total_fraud": 179292,
+    "fraud_rate": 0.031528
+  },
+  "type_frequencies": {
+    "CASH_IN": {
+      "count": 2219400,
+      "fraud_count": 0,
+      "weight": 0.390272
+    },
+    "PAYMENT": {
+      "count": 1448502,
+      "fraud_count": 0,
+      "weight": 0.254713
+    },
+    "CASH_OUT": {
+      "count": 1152336,
+      "fraud_count": 89567,
+      "weight": 0.202633
+    },
+    "TRANSFER": {
+      "count": 689195,
+      "fraud_count": 89725,
+      "weight": 0.121192
+    },
+    "DEBIT": {
+      "count": 177368,
+      "fraud_count": 0,
+      "weight": 0.031189
+    }
+  },
+  "numeric_profiles": {
+    "CASH_IN_0": {
+      "type": "CASH_IN",
+      "is_fraud": 0,
+      "count": 2219400,
+      "amount": {
+        "mean": 134256.1693313096,
+        "stddev": 74603.778084135,
+        "min": 0.32,
+        "max": 748323.84,
+        "p10": 39884.08,
+        "p25": 78168.35,
+        "p50": 128120.02,
+        "p75": 182640.02,
+        "p90": 234176.79
+      },
+      "newBalanceDest": {
+        "mean": 852094.2722333231,
+        "stddev": 556056.3721413193,
+        "min": 0.0,
+        "max": 2442267.97,
+        "p10": 92013.19,
+        "p25": 402687.28,
+        "p50": 803702.51,
+        "p75": 1285308.78,
+        "p90": 1659361.71
+      },
+      "oldBalanceDest": {
+        "mean": 852094.2722333231,
+        "stddev": 556056.3721413193,
+        "min": 0.0,
+        "max": 2442267.97,
+        "p10": 92013.19,
+        "p25": 402687.28,
+        "p50": 803702.51,
+        "p75": 1285308.78,
+        "p90": 1659361.71
+      },
+      "diffOrig": {
+        "mean": 134256.1693302816,
+        "stddev": 74603.77808110541,
+        "min": 0.3200000002980232,
+        "max": 748323.8399999999,
+        "p10": 39884.080000000075,
+        "p25": 78168.33999999985,
+        "p50": 128120.02000000002,
+        "p75": 182640.01999999955,
+        "p90": 234176.79000000004
+      },
+      "diffDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      }
+    },
+    "CASH_OUT_0": {
+      "type": "CASH_OUT",
+      "is_fraud": 0,
+      "count": 1062769,
+      "amount": {
+        "mean": 124536.57092972998,
+        "stddev": 62968.84092789436,
+        "min": 1.81,
+        "max": 510356.96,
+        "p10": 45368.9,
+        "p25": 78207.17,
+        "p50": 119802.26,
+        "p75": 165458.67,
+        "p90": 208715.66
+      },
+      "newBalanceDest": {
+        "mean": 883620.2160337142,
+        "stddev": 553641.8466332579,
+        "min": 0.0,
+        "max": 2442267.97,
+        "p10": 157998.14,
+        "p25": 414467.11,
+        "p50": 827924.74,
+        "p75": 1338058.89,
+        "p90": 1676805.1
+      },
+      "oldBalanceDest": {
+        "mean": 883620.2160337142,
+        "stddev": 553641.8466332579,
+        "min": 0.0,
+        "max": 2442267.97,
+        "p10": 157998.14,
+        "p25": 414467.11,
+        "p50": 827924.74,
+        "p75": 1338058.89,
+        "p90": 1676805.1
+      },
+      "diffOrig": {
+        "mean": -123985.09162734108,
+        "stddev": 63278.66793720266,
+        "min": -510356.95999999973,
+        "max": 0.0,
+        "p10": -208401.95999999996,
+        "p25": -165232.75,
+        "p50": -119403.2200000002,
+        "p75": -77642.50000000023,
+        "p90": -44420.75999999978
+      },
+      "diffDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      }
+    },
+    "CASH_OUT_1": {
+      "type": "CASH_OUT",
+      "is_fraud": 1,
+      "count": 89567,
+      "amount": {
+        "mean": 316344.8483464893,
+        "stddev": 153458.15251877953,
+        "min": 0.0,
+        "max": 400000.0,
+        "p10": 0.0,
+        "p25": 345435.92,
+        "p50": 400000.0,
+        "p75": 400000.0,
+        "p90": 400000.0
+      },
+      "newBalanceDest": {
+        "mean": 928335.5697784891,
+        "stddev": 574065.6863430737,
+        "min": 0.0,
+        "max": 2434245.79,
+        "p10": 170481.39,
+        "p25": 396976.41,
+        "p50": 928108.3,
+        "p75": 1416016.74,
+        "p90": 1707550.57
+      },
+      "oldBalanceDest": {
+        "mean": 928335.5697784891,
+        "stddev": 574065.6863430737,
+        "min": 0.0,
+        "max": 2434245.79,
+        "p10": 170481.39,
+        "p25": 396976.41,
+        "p50": 928108.3,
+        "p75": 1416016.74,
+        "p90": 1707550.57
+      },
+      "diffOrig": {
+        "mean": -316344.8483464893,
+        "stddev": 153458.15251877953,
+        "min": -400000.0,
+        "max": 0.0,
+        "p10": -400000.0,
+        "p25": -400000.0,
+        "p50": -400000.0,
+        "p75": -345869.48,
+        "p90": 0.0
+      },
+      "diffDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      }
+    },
+    "DEBIT_0": {
+      "type": "DEBIT",
+      "is_fraud": 0,
+      "count": 177368,
+      "amount": {
+        "mean": 4056.713663062095,
+        "stddev": 6891.798249117175,
+        "min": 0.2,
+        "max": 212586.39,
+        "p10": 1070.14,
+        "p25": 1606.12,
+        "p50": 2533.36,
+        "p75": 4339.86,
+        "p90": 7930.95
+      },
+      "newBalanceDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      },
+      "oldBalanceDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      },
+      "diffOrig": {
+        "mean": -4042.385553538406,
+        "stddev": 6863.263353364383,
+        "min": -212586.39000000013,
+        "max": 0.0,
+        "p10": -7909.839999999851,
+        "p25": -4330.130000000354,
+        "p50": -2528.119999999879,
+        "p75": -1602.119999999646,
+        "p90": -1062.6899999999441
+      },
+      "diffDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      }
+    },
+    "PAYMENT_0": {
+      "type": "PAYMENT",
+      "is_fraud": 0,
+      "count": 1448502,
+      "amount": {
+        "mean": 7314.430280738277,
+        "stddev": 5891.066298532086,
+        "min": 0.02,
+        "max": 122827.77,
+        "p10": 1643.63,
+        "p25": 3113.19,
+        "p50": 5899.49,
+        "p75": 10073.34,
+        "p90": 14632.46
+      },
+      "newBalanceDest": {
+        "mean": 1045268.6228634531,
+        "stddev": 580154.5698231976,
+        "min": 0.0,
+        "max": 2464230.43,
+        "p10": 208722.85,
+        "p25": 529348.14,
+        "p50": 1117616.3,
+        "p75": 1540892.17,
+        "p90": 1781253.76
+      },
+      "oldBalanceDest": {
+        "mean": 1037961.0636682459,
+        "stddev": 581346.6966554535,
+        "min": 0.0,
+        "max": 2463123.85,
+        "p10": 200022.37,
+        "p25": 521082.83,
+        "p50": 1109567.97,
+        "p75": 1534951.75,
+        "p90": 1775898.49
+      },
+      "diffOrig": {
+        "mean": -7307.559189624852,
+        "stddev": 5891.253667699743,
+        "min": -122827.78000000026,
+        "max": 0.0,
+        "p10": -14626.790000000037,
+        "p25": -10066.51000000001,
+        "p50": -5893.870000000112,
+        "p75": -3107.4500000001863,
+        "p90": -1636.8600000003353
+      },
+      "diffDest": {
+        "mean": 7307.559195189165,
+        "stddev": 5891.253671394191,
+        "min": 0.0,
+        "max": 122827.77000000002,
+        "p10": 1637.130000000121,
+        "p25": 3106.2399999999907,
+        "p50": 5893.369999999995,
+        "p75": 10066.589999999967,
+        "p90": 14626.25
+      }
+    },
+    "TRANSFER_0": {
+      "type": "TRANSFER",
+      "is_fraud": 0,
+      "count": 599470,
+      "amount": {
+        "mean": 293733.4229548963,
+        "stddev": 133840.1862819956,
+        "min": 5.24,
+        "max": 400000.0,
+        "p10": 73598.97,
+        "p25": 174123.52,
+        "p50": 400000.0,
+        "p75": 400000.0,
+        "p90": 400000.0
+      },
+      "newBalanceDest": {
+        "mean": 2020844.8284626189,
+        "stddev": 1581452.6830041772,
+        "min": -19463.25,
+        "max": 20187445.17,
+        "p10": 400000.0,
+        "p25": 785021.34,
+        "p50": 1603111.63,
+        "p75": 3056938.86,
+        "p90": 4168003.64
+      },
+      "oldBalanceDest": {
+        "mean": 1761205.3578956127,
+        "stddev": 1580974.0794890714,
+        "min": -24870.63,
+        "max": 19999655.11,
+        "p10": 0.0,
+        "p25": 400000.0,
+        "p50": 1362600.22,
+        "p75": 2800000.0,
+        "p90": 3914316.61
+      },
+      "diffOrig": {
+        "mean": -259639.47056498312,
+        "stddev": 157329.8930156636,
+        "min": -400000.00000000186,
+        "max": 0.0,
+        "p10": -400000.0,
+        "p25": -400000.0,
+        "p50": -342147.63999999966,
+        "p75": -106726.4700000002,
+        "p90": 0.0
+      },
+      "diffDest": {
+        "mean": 259639.47056698587,
+        "stddev": 157329.89301026176,
+        "min": 0.0,
+        "max": 400000.00000000093,
+        "p10": 0.0,
+        "p25": 106715.57999999961,
+        "p50": 342183.69,
+        "p75": 400000.0,
+        "p90": 400000.0
+      }
+    },
+    "TRANSFER_1": {
+      "type": "TRANSFER",
+      "is_fraud": 1,
+      "count": 89725,
+      "amount": {
+        "mean": 370005.82590136584,
+        "stddev": 84622.53558773975,
+        "min": 1.36,
+        "max": 400000.0,
+        "p10": 265671.18,
+        "p25": 400000.0,
+        "p50": 400000.0,
+        "p75": 400000.0,
+        "p90": 400000.0
+      },
+      "newBalanceDest": {
+        "mean": 316303.2847753691,
+        "stddev": 153529.03595930498,
+        "min": 0.0,
+        "max": 400000.0,
+        "p10": 0.0,
+        "p25": 345693.25,
+        "p50": 400000.0,
+        "p75": 400000.0,
+        "p90": 400000.0
+      },
+      "oldBalanceDest": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0,
+        "p90": 0.0
+      },
+      "diffOrig": {
+        "mean": -316303.2847753691,
+        "stddev": 153529.03595930495,
+        "min": -400000.00000000093,
+        "max": 0.0,
+        "p10": -400000.0,
+        "p25": -400000.0,
+        "p50": -400000.0,
+        "p75": -345895.85,
+        "p90": 0.0
+      },
+      "diffDest": {
+        "mean": 316303.2847753691,
+        "stddev": 153529.03595930498,
+        "min": 0.0,
+        "max": 400000.0,
+        "p10": 0.0,
+        "p25": 345693.25,
+        "p50": 400000.0,
+        "p75": 400000.0,
+        "p90": 400000.0
+      }
+    }
+  },
+  "country_pairs": [
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Russian Federation",
+      "count": 100756,
+      "fraud_count": 3312,
+      "weight": 0.036458,
+      "fraud_rate": 0.0329
+    },
+    {
+      "countryOrig_name": "Nigeria",
+      "countryDest_name": "Russian Federation",
+      "count": 51209,
+      "fraud_count": 1651,
+      "weight": 0.01853,
+      "fraud_rate": 0.0322
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Russian Federation",
+      "count": 50964,
+      "fraud_count": 1589,
+      "weight": 0.018441,
+      "fraud_rate": 0.0312
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Canada",
+      "count": 50944,
+      "fraud_count": 1603,
+      "weight": 0.018434,
+      "fraud_rate": 0.0315
+    },
+    {
+      "countryOrig_name": "France",
+      "countryDest_name": "Russian Federation",
+      "count": 50847,
+      "fraud_count": 1616,
+      "weight": 0.018399,
+      "fraud_rate": 0.0318
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Palestinian Territory, Occupied",
+      "count": 50784,
+      "fraud_count": 1622,
+      "weight": 0.018376,
+      "fraud_rate": 0.0319
+    },
+    {
+      "countryOrig_name": "Spain",
+      "countryDest_name": "Russian Federation",
+      "count": 50775,
+      "fraud_count": 1551,
+      "weight": 0.018373,
+      "fraud_rate": 0.0305
+    },
+    {
+      "countryOrig_name": "Peru",
+      "countryDest_name": "Russian Federation",
+      "count": 50760,
+      "fraud_count": 1637,
+      "weight": 0.018367,
+      "fraud_rate": 0.0322
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "R\u00e9union",
+      "count": 50731,
+      "fraud_count": 1630,
+      "weight": 0.018357,
+      "fraud_rate": 0.0321
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Spain",
+      "count": 50725,
+      "fraud_count": 1564,
+      "weight": 0.018355,
+      "fraud_rate": 0.0308
+    },
+    {
+      "countryOrig_name": "Canada",
+      "countryDest_name": "Russian Federation",
+      "count": 50684,
+      "fraud_count": 1581,
+      "weight": 0.01834,
+      "fraud_rate": 0.0312
+    },
+    {
+      "countryOrig_name": "Brazil",
+      "countryDest_name": "Russian Federation",
+      "count": 50676,
+      "fraud_count": 1678,
+      "weight": 0.018337,
+      "fraud_rate": 0.0331
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Italy",
+      "count": 50645,
+      "fraud_count": 1563,
+      "weight": 0.018326,
+      "fraud_rate": 0.0309
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Qatar",
+      "count": 50598,
+      "fraud_count": 1493,
+      "weight": 0.018309,
+      "fraud_rate": 0.0295
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Russian Federation",
+      "count": 50577,
+      "fraud_count": 1645,
+      "weight": 0.018301,
+      "fraud_rate": 0.0325
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Panama",
+      "count": 50559,
+      "fraud_count": 1592,
+      "weight": 0.018295,
+      "fraud_rate": 0.0315
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Turkey",
+      "count": 50504,
+      "fraud_count": 1559,
+      "weight": 0.018275,
+      "fraud_rate": 0.0309
+    },
+    {
+      "countryOrig_name": "Panama",
+      "countryDest_name": "Russian Federation",
+      "count": 50444,
+      "fraud_count": 1541,
+      "weight": 0.018253,
+      "fraud_rate": 0.0305
+    },
+    {
+      "countryOrig_name": "Italy",
+      "countryDest_name": "Russian Federation",
+      "count": 50425,
+      "fraud_count": 1592,
+      "weight": 0.018246,
+      "fraud_rate": 0.0316
+    },
+    {
+      "countryOrig_name": "R\u00e9union",
+      "countryDest_name": "Russian Federation",
+      "count": 50357,
+      "fraud_count": 1644,
+      "weight": 0.018221,
+      "fraud_rate": 0.0326
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Brazil",
+      "count": 50328,
+      "fraud_count": 1604,
+      "weight": 0.018211,
+      "fraud_rate": 0.0319
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Cambodia",
+      "count": 50318,
+      "fraud_count": 1649,
+      "weight": 0.018207,
+      "fraud_rate": 0.0328
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "France",
+      "count": 50317,
+      "fraud_count": 1581,
+      "weight": 0.018207,
+      "fraud_rate": 0.0314
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Nigeria",
+      "count": 50285,
+      "fraud_count": 1598,
+      "weight": 0.018195,
+      "fraud_rate": 0.0318
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "Russian Federation",
+      "count": 50160,
+      "fraud_count": 1520,
+      "weight": 0.01815,
+      "fraud_rate": 0.0303
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Russian Federation",
+      "count": 50121,
+      "fraud_count": 1529,
+      "weight": 0.018136,
+      "fraud_rate": 0.0305
+    },
+    {
+      "countryOrig_name": "Russian Federation",
+      "countryDest_name": "Peru",
+      "count": 50116,
+      "fraud_count": 1583,
+      "weight": 0.018134,
+      "fraud_rate": 0.0316
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Cambodia",
+      "count": 25623,
+      "fraud_count": 819,
+      "weight": 0.009272,
+      "fraud_rate": 0.032
+    },
+    {
+      "countryOrig_name": "Brazil",
+      "countryDest_name": "Cambodia",
+      "count": 25608,
+      "fraud_count": 797,
+      "weight": 0.009266,
+      "fraud_rate": 0.0311
+    },
+    {
+      "countryOrig_name": "Italy",
+      "countryDest_name": "Panama",
+      "count": 25587,
+      "fraud_count": 856,
+      "weight": 0.009259,
+      "fraud_rate": 0.0335
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "Cambodia",
+      "count": 25563,
+      "fraud_count": 785,
+      "weight": 0.00925,
+      "fraud_rate": 0.0307
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Canada",
+      "count": 25560,
+      "fraud_count": 836,
+      "weight": 0.009249,
+      "fraud_rate": 0.0327
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "R\u00e9union",
+      "count": 25553,
+      "fraud_count": 885,
+      "weight": 0.009246,
+      "fraud_rate": 0.0346
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "Palestinian Territory, Occupied",
+      "count": 25547,
+      "fraud_count": 759,
+      "weight": 0.009244,
+      "fraud_rate": 0.0297
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Spain",
+      "count": 25527,
+      "fraud_count": 809,
+      "weight": 0.009237,
+      "fraud_rate": 0.0317
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "France",
+      "count": 25525,
+      "fraud_count": 843,
+      "weight": 0.009236,
+      "fraud_rate": 0.033
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Peru",
+      "count": 25522,
+      "fraud_count": 816,
+      "weight": 0.009235,
+      "fraud_rate": 0.032
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Brazil",
+      "count": 25516,
+      "fraud_count": 795,
+      "weight": 0.009233,
+      "fraud_rate": 0.0312
+    },
+    {
+      "countryOrig_name": "Nigeria",
+      "countryDest_name": "Palestinian Territory, Occupied",
+      "count": 25492,
+      "fraud_count": 803,
+      "weight": 0.009224,
+      "fraud_rate": 0.0315
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Panama",
+      "count": 25491,
+      "fraud_count": 842,
+      "weight": 0.009224,
+      "fraud_rate": 0.033
+    },
+    {
+      "countryOrig_name": "France",
+      "countryDest_name": "R\u00e9union",
+      "count": 25490,
+      "fraud_count": 817,
+      "weight": 0.009223,
+      "fraud_rate": 0.0321
+    },
+    {
+      "countryOrig_name": "Panama",
+      "countryDest_name": "Spain",
+      "count": 25477,
+      "fraud_count": 805,
+      "weight": 0.009219,
+      "fraud_rate": 0.0316
+    },
+    {
+      "countryOrig_name": "Italy",
+      "countryDest_name": "R\u00e9union",
+      "count": 25475,
+      "fraud_count": 803,
+      "weight": 0.009218,
+      "fraud_rate": 0.0315
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Qatar",
+      "count": 25470,
+      "fraud_count": 765,
+      "weight": 0.009216,
+      "fraud_rate": 0.03
+    },
+    {
+      "countryOrig_name": "Spain",
+      "countryDest_name": "Spain",
+      "count": 25469,
+      "fraud_count": 822,
+      "weight": 0.009216,
+      "fraud_rate": 0.0323
+    },
+    {
+      "countryOrig_name": "Nigeria",
+      "countryDest_name": "Panama",
+      "count": 25460,
+      "fraud_count": 793,
+      "weight": 0.009213,
+      "fraud_rate": 0.0311
+    },
+    {
+      "countryOrig_name": "R\u00e9union",
+      "countryDest_name": "Spain",
+      "count": 25451,
+      "fraud_count": 854,
+      "weight": 0.009209,
+      "fraud_rate": 0.0336
+    },
+    {
+      "countryOrig_name": "Canada",
+      "countryDest_name": "Qatar",
+      "count": 25442,
+      "fraud_count": 842,
+      "weight": 0.009206,
+      "fraud_rate": 0.0331
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Canada",
+      "count": 25438,
+      "fraud_count": 805,
+      "weight": 0.009205,
+      "fraud_rate": 0.0316
+    },
+    {
+      "countryOrig_name": "Panama",
+      "countryDest_name": "Qatar",
+      "count": 25433,
+      "fraud_count": 760,
+      "weight": 0.009203,
+      "fraud_rate": 0.0299
+    },
+    {
+      "countryOrig_name": "Brazil",
+      "countryDest_name": "Palestinian Territory, Occupied",
+      "count": 25429,
+      "fraud_count": 745,
+      "weight": 0.009201,
+      "fraud_rate": 0.0293
+    },
+    {
+      "countryOrig_name": "R\u00e9union",
+      "countryDest_name": "Nigeria",
+      "count": 25429,
+      "fraud_count": 754,
+      "weight": 0.009201,
+      "fraud_rate": 0.0297
+    },
+    {
+      "countryOrig_name": "France",
+      "countryDest_name": "Cambodia",
+      "count": 25425,
+      "fraud_count": 806,
+      "weight": 0.0092,
+      "fraud_rate": 0.0317
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Turkey",
+      "count": 25418,
+      "fraud_count": 801,
+      "weight": 0.009197,
+      "fraud_rate": 0.0315
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "France",
+      "count": 25418,
+      "fraud_count": 808,
+      "weight": 0.009197,
+      "fraud_rate": 0.0318
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Turkey",
+      "count": 25408,
+      "fraud_count": 836,
+      "weight": 0.009194,
+      "fraud_rate": 0.0329
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Qatar",
+      "count": 25402,
+      "fraud_count": 802,
+      "weight": 0.009192,
+      "fraud_rate": 0.0316
+    },
+    {
+      "countryOrig_name": "Qatar",
+      "countryDest_name": "Italy",
+      "count": 25399,
+      "fraud_count": 791,
+      "weight": 0.009191,
+      "fraud_rate": 0.0311
+    },
+    {
+      "countryOrig_name": "Spain",
+      "countryDest_name": "Peru",
+      "count": 25395,
+      "fraud_count": 807,
+      "weight": 0.009189,
+      "fraud_rate": 0.0318
+    },
+    {
+      "countryOrig_name": "Canada",
+      "countryDest_name": "Nigeria",
+      "count": 25390,
+      "fraud_count": 792,
+      "weight": 0.009187,
+      "fraud_rate": 0.0312
+    },
+    {
+      "countryOrig_name": "Canada",
+      "countryDest_name": "Peru",
+      "count": 25383,
+      "fraud_count": 814,
+      "weight": 0.009185,
+      "fraud_rate": 0.0321
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "Peru",
+      "count": 25379,
+      "fraud_count": 805,
+      "weight": 0.009183,
+      "fraud_rate": 0.0317
+    },
+    {
+      "countryOrig_name": "Nigeria",
+      "countryDest_name": "France",
+      "count": 25374,
+      "fraud_count": 829,
+      "weight": 0.009181,
+      "fraud_rate": 0.0327
+    },
+    {
+      "countryOrig_name": "Brazil",
+      "countryDest_name": "France",
+      "count": 25374,
+      "fraud_count": 804,
+      "weight": 0.009181,
+      "fraud_rate": 0.0317
+    },
+    {
+      "countryOrig_name": "Panama",
+      "countryDest_name": "Brazil",
+      "count": 25373,
+      "fraud_count": 790,
+      "weight": 0.009181,
+      "fraud_rate": 0.0311
+    },
+    {
+      "countryOrig_name": "Spain",
+      "countryDest_name": "Cambodia",
+      "count": 25372,
+      "fraud_count": 820,
+      "weight": 0.009181,
+      "fraud_rate": 0.0323
+    },
+    {
+      "countryOrig_name": "Peru",
+      "countryDest_name": "Brazil",
+      "count": 25371,
+      "fraud_count": 806,
+      "weight": 0.00918,
+      "fraud_rate": 0.0318
+    },
+    {
+      "countryOrig_name": "Brazil",
+      "countryDest_name": "Panama",
+      "count": 25365,
+      "fraud_count": 810,
+      "weight": 0.009178,
+      "fraud_rate": 0.0319
+    },
+    {
+      "countryOrig_name": "France",
+      "countryDest_name": "Brazil",
+      "count": 25364,
+      "fraud_count": 775,
+      "weight": 0.009178,
+      "fraud_rate": 0.0306
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Italy",
+      "count": 25359,
+      "fraud_count": 818,
+      "weight": 0.009176,
+      "fraud_rate": 0.0323
+    },
+    {
+      "countryOrig_name": "Panama",
+      "countryDest_name": "Nigeria",
+      "count": 25358,
+      "fraud_count": 728,
+      "weight": 0.009176,
+      "fraud_rate": 0.0287
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Spain",
+      "count": 25355,
+      "fraud_count": 834,
+      "weight": 0.009175,
+      "fraud_rate": 0.0329
+    },
+    {
+      "countryOrig_name": "Peru",
+      "countryDest_name": "France",
+      "count": 25350,
+      "fraud_count": 780,
+      "weight": 0.009173,
+      "fraud_rate": 0.0308
+    },
+    {
+      "countryOrig_name": "France",
+      "countryDest_name": "Qatar",
+      "count": 25347,
+      "fraud_count": 797,
+      "weight": 0.009172,
+      "fraud_rate": 0.0314
+    },
+    {
+      "countryOrig_name": "Nigeria",
+      "countryDest_name": "Spain",
+      "count": 25344,
+      "fraud_count": 843,
+      "weight": 0.009171,
+      "fraud_rate": 0.0333
+    },
+    {
+      "countryOrig_name": "Palestinian Territory, Occupied",
+      "countryDest_name": "Peru",
+      "count": 25343,
+      "fraud_count": 838,
+      "weight": 0.00917,
+      "fraud_rate": 0.0331
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Palestinian Territory, Occupied",
+      "count": 25343,
+      "fraud_count": 808,
+      "weight": 0.00917,
+      "fraud_rate": 0.0319
+    },
+    {
+      "countryOrig_name": "R\u00e9union",
+      "countryDest_name": "R\u00e9union",
+      "count": 25341,
+      "fraud_count": 817,
+      "weight": 0.00917,
+      "fraud_rate": 0.0322
+    },
+    {
+      "countryOrig_name": "Turkey",
+      "countryDest_name": "Panama",
+      "count": 25336,
+      "fraud_count": 814,
+      "weight": 0.009168,
+      "fraud_rate": 0.0321
+    },
+    {
+      "countryOrig_name": "Cambodia",
+      "countryDest_name": "Brazil",
+      "count": 25334,
+      "fraud_count": 803,
+      "weight": 0.009167,
+      "fraud_rate": 0.0317
+    }
+  ]
+}
