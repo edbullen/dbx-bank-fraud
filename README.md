@@ -31,6 +31,10 @@ in order  to make sure they get executed against the correct workspace.
 # Quick-start deployment
 ## 1. Raw Data, Volumes, Tables and Views
 
+- Identify / Create the Unity Catalog (UC) Catalog
+- Identify / Create the UC Schema
+- Create the Volume `bank-fraud` in the UC catalog.schema
+
 Use the `create.sh` and `destroy.sh` scripts to deploy or tear down the demo from the repo root. They support both **non-interactive** (one-shot, suitable for CI or AI agents) and **interactive** (step-by-step prompts) modes.
 
 **Non-interactive (all parameters on the command line):**
@@ -68,16 +72,18 @@ After the base data and tables are in place (e.g. via `create.sh`), use `deploy.
 2. **ML build** — Runs the training notebook then the deploy notebook (so the model is registered in Unity Catalog). By default uses **serverless compute** (no cluster ID needed). Optionally pass `--cluster-id` to use an existing cluster. If a notebook run fails, the script prints the run ID and fetches the run output; you can also run `databricks -p <profile> jobs get-run-output <run_id>` to view error details.
 3. **Dashboard** — Creates and publishes the Lakeview dashboard from `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`, with your catalog and schema applied to the datasets.
 
+NOTE: make sure a folder structure is in place in the workspace for the notebooks to be copied to. This needs to include a pre-created `notebooks` folder, i.e. pre-create `/Users/me@example.com/dbx-bank-fraud/notebooks`
+
 **Example (serverless; no cluster):**
 
 ```bash
-./deploy.sh -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <sql-warehouse-id>
+./deploy.sh -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <sql-warehouse-id>  --serve-model
 ```
 
 **Example (with existing cluster):**
 
 ```bash
-./deploy.sh -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id> --cluster-id <cluster-id>
+./deploy.sh -p myprofile -c my_catalog -s my_schema --workspace-path /Users/me@example.com/dbx-bank-fraud --warehouse-id <id> --cluster-id <cluster-id>
 ```
 
 **Example (non-interactive, serverless):**
@@ -134,6 +140,45 @@ Run `./deploy.sh --help` for all options.
 
 The dashboard template lives in `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.json`; a copy remains in `sql/` for reference.
 
+#### Testing the Model Serving Endpoint.
+
+Rest API JSON Payload - predicts 1 (Fraud)
+
+```
+{
+  "dataframe_records": [
+    {
+      "countryOrig_name": "Turkey",
+      "diffDest": 400000,
+      "diffOrig": -400000,
+      "oldBalanceDest": 0,
+      "amount": 400000,
+      "type": "TRANSFER",
+      "newBalanceDest": 400000,
+      "countryDest_name": "Canada"
+    }
+  ]
+}
+```
+Rest API JSON Payload - predicts 0 ( Not Fraud)
+
+```
+{
+  "dataframe_records": [
+    {
+      "countryOrig_name": "Russian Federation",
+      "diffDest": 0,
+      "diffOrig": 358291.03,
+      "oldBalanceDest": 1278730.92,
+      "amount": 358291.03,
+      "type": "CASH_IN",
+      "newBalanceDest": 1278730.92,
+      "countryDest_name": "Russian Federation"
+    }
+  ]
+}
+```
+
 ## 3. Deploy UC Function + AI Chat Agent using UC Function tool
 
 + Create the UC function `explain_transaction_risk()`  
@@ -153,7 +198,73 @@ The dashboard template lives in `dashboards/Retail_Bank_Fraud_Dashboard.lvdash.j
 
 Optional: `--llm-endpoint <name>` (default `databricks-gpt-5-2`), `--agent-serving-endpoint-name <name>` (default `bank-fraud-explain`), `--agent-register-timeout <seconds>` (default `5400` for the register/deploy notebook). Uses serverless compute unless you pass `--cluster-id`.
 
----
+Test the agent to explain Fraud using the AI Playground.  Try transaction ID 3402687 as an example.
+
+![Dashboard](./doc/fraud_agent_explain_example.png)
+
+
+## 4. Databricks Apps Serving - deploy transaction simulator and web-app to App
+
+Pre-reqs:
+1. Lakebase Database: create a lakebase database in the workspace. Note the endpoint hostname and endpoint details (use the Lakebase "Connect" dialog to find the details required for connecting)
+  Also use `databricks postgres list-projects -p <my-dbx-cli-profile>` to get the project ID
+
+
+#### Smoke tests for Lakebase 
+Check the Lakebase services are there and connectivity is set up correctly in `/app/.env`
+- `python scripts/lakebase_smoke_test.py`
+
+#### Deployment Steps - Databricks CLI
+
+1. Ensure frontend is built:
+```
+cd <repo-dir>/app/frontend && npm run build 
+```
+
+2. Create the app (first time only):
+```
+databricks apps create fraud-analytics --profile <my-profile>
+```
+
+3. Sync app files to workspace:
+```
+databricks sync <repo-dir>/app /Workspace/Users/<user.name>@databricks.com/fraud-analytics --profile <my-profile>
+```
+
+4. Upload the built frontend separately (since .gitignore excludes dist/):
+```
+databricks workspace import-dir <repo-dir>/app/frontend/dist /Workspace/Users/<user.name>@databricks.com/fraud-analytics/frontend/dist --profile <my-profile> --overwrite
+```
+
+5. Deploy
+
+Note that the `app/app.yaml` configuration binds the app to the Lakebase DB.  Check that this links up with the target lakebase DB.
+```
+databricks apps deploy fraud-analytics --source-code-path /Workspace/Users/<user.name>@databricks.com/fraud-analytics --profile <my-profile>
+```
+
+6. Check status and get the app URL:
+```
+databricks apps get fraud-analytics --profile <my-profile>
+```
+
+7. Get the Service Principal Name for the app:
+```
+databricks apps get fraud-analytics --profile <my-profile> |grep service_principal
+```
+(Alternatively Compute → Apps → <app> → identity in the Workspace UI)
+
+8. Grant permissions for the App Service Principal to Query the `bank-fraud-predict` endpoint
+Databricks Workspace UI -> Serving -> Permissions -> Add <service_principal_client_id> with "Can Query" privs
+
+9. Restart the app (Re-Deploy)
+
+10. Subsequent changes to code:
+Updates after code change - after changing backend/frontend, repeat build → sync → import-dir dist → deploy (or at least sync + dist when only UI changes).
+
+# OLD #
+  
+----------------------------------------------------------------------------------------------------
 # Manual Setup Notes - Base Data, Tables and Views
 
 File-based data from `./data` folder in this repo needs to be loaded to a Unity Catalog Volume.  This can be a UC *Managed Volume* (storage and setup managed within Databricks) or an *External Volume* (files stored in an external cloud storage bucket mapped to this volume).  

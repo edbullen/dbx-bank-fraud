@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 SCORED_TRANSACTIONS_DDL = """
 CREATE TABLE IF NOT EXISTS scored_transactions (
-    id              TEXT PRIMARY KEY,
+    id              BIGINT PRIMARY KEY,
     timestamp       TIMESTAMPTZ NOT NULL,
     type            TEXT NOT NULL,
     amount          DOUBLE PRECISION NOT NULL,

@@ -42,3 +42,8 @@ def is_lakebase_configured() -> bool:
     if USE_MOCK_DATA:
         return False
     return bool(LAKEBASE_HOST and LAKEBASE_USER)
+
+
+def is_kafka_configured() -> bool:
+    """Returns True if Kafka producer should be used instead of inline scoring."""
+    return bool(KAFKA_BOOTSTRAP_SERVERS and KAFKA_API_KEY)

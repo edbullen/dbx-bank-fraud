@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 psycopg2-binary
-confluent-kafka
 sse-starlette
 databricks-sdk
 python-dotenv

@@ -1,5 +1,5 @@
 export interface ScoredTransaction {
-  id: string;
+  id: number;
   timestamp: string;
   type: string;
   amount: number;
