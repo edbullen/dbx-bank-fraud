@@ -39,6 +39,9 @@ CREATE TABLE IF NOT EXISTS scored_transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_scored_at ON scored_transactions (scored_at DESC);
 CREATE INDEX IF NOT EXISTS idx_country_flow ON scored_transactions (country_orig, country_dest);
+-- Required by Lakebase → Delta Lakehouse Sync (logical replication) so it can
+-- resolve UPDATE/DELETE rows on non-key columns. Idempotent.
+ALTER TABLE scored_transactions REPLICA IDENTITY FULL;
 """
 
 
@@ -55,6 +58,8 @@ class DB(Protocol):
     def get_time_series(self, bucket_seconds: int = 10) -> list[dict]: ...
     def ensure_tables(self) -> None: ...
     def clear_data(self) -> None: ...
+    def ping(self) -> bool: ...
+    def get_max_id(self) -> Optional[int]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -173,9 +178,28 @@ class LakebaseDB:
                         txn["scored_at"],
                     ),
                 )
+                if cur.rowcount == 0:
+                    log.warning(
+                        "Insert for txn id=%s was a no-op (ON CONFLICT DO NOTHING). "
+                        "Likely a duplicate id from an earlier run. Run /api/reset "
+                        "or TRUNCATE scored_transactions to clear stale data.",
+                        txn.get("id"),
+                    )
             conn.commit()
-        finally:
             self._put(conn)
+        except Exception:
+            # Mark this connection as broken so the pool replaces it on the
+            # next checkout instead of handing out a dead socket again.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            with self._token_lock:
+                try:
+                    self._pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+            raise
 
     def get_latest_transactions(self, limit: int = 50) -> list[dict]:
         conn = self._conn()
@@ -276,6 +300,44 @@ class LakebaseDB:
         finally:
             self._put(conn)
 
+    def get_max_id(self) -> Optional[int]:
+        """Return MAX(id) from scored_transactions, or None if empty.
+        Used at startup to seed the generator's process-local id counter so
+        the same IDs are not replayed after an app restart."""
+        conn = self._conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT MAX(id) FROM scored_transactions")
+                row = cur.fetchone()
+            self._put(conn)
+            return row[0] if row and row[0] is not None else None
+        except Exception:
+            with self._token_lock:
+                try:
+                    self._pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+            log.exception("get_max_id failed")
+            return None
+
+    def ping(self) -> bool:
+        """Cheap liveness check: SELECT 1. Evicts the connection on failure
+        so the pool self-heals, matching insert_transaction's behaviour."""
+        conn = self._conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+            self._put(conn)
+            return True
+        except Exception:
+            with self._token_lock:
+                try:
+                    self._pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+            return False
+
     def shutdown(self):
         self._running = False
         if self._pool:
@@ -372,6 +434,15 @@ class MockDB:
     def clear_data(self):
         with self._lock:
             self._transactions.clear()
+
+    def ping(self) -> bool:
+        return True
+
+    def get_max_id(self) -> Optional[int]:
+        with self._lock:
+            if not self._transactions:
+                return None
+            return max(t["id"] for t in self._transactions)
 
     def shutdown(self):
         pass

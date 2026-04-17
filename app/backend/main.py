@@ -46,14 +46,36 @@ generator = EventGenerator()
 # ---------------------------------------------------------------------------
 
 async def _bridge_generator_to_db():
-    """Background task: moves scored transactions from generator queue into Lakebase."""
+    """Background task: moves scored transactions from generator queue into Lakebase.
+
+    Per-insert exceptions are logged and swallowed so that a transient DB error
+    (e.g. a stale pooled connection after a long idle period between Stop/Start)
+    cannot kill the bridge task permanently. The DB call is offloaded to a
+    thread so the synchronous psycopg2 work does not block the event loop.
+
+    Throughput is logged every 25 inserts so it is obvious from `/logz` whether
+    the pipeline is flowing end-to-end.
+    """
     db = get_db()
     q = generator.subscribe()
+    log.info("Bridge task started -- db backend=%s, subscribed queue id=%s",
+             db.__class__.__name__, id(q))
+    ok = 0
+    failed = 0
     try:
         while True:
             txn = await q.get()
-            db.insert_transaction(txn)
+            try:
+                await asyncio.to_thread(db.insert_transaction, txn)
+                ok += 1
+                if ok == 1 or ok % 25 == 0:
+                    log.info("Bridge inserted %d txns so far (last id=%s), %d failures",
+                             ok, txn.get("id"), failed)
+            except Exception:
+                failed += 1
+                log.exception("Bridge insert failed for txn id=%s", txn.get("id"))
     except asyncio.CancelledError:
+        log.info("Bridge task stopping (ok=%d, failed=%d)", ok, failed)
         generator.unsubscribe(q)
 
 
@@ -91,7 +113,19 @@ async def _poll_lakebase_for_sse():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_db()
+    db = get_db()
+
+    # Seed the generator's id counter past any existing rows in the DB so we
+    # don't replay IDs and silently hit `ON CONFLICT (id) DO NOTHING` on every
+    # restart.
+    try:
+        from .generator import bootstrap_id_counter
+        max_id = await asyncio.to_thread(db.get_max_id)
+        next_id = bootstrap_id_counter(max_id)
+        log.info("Generator id counter bootstrapped: max_existing_id=%s, next_id=%s",
+                 max_id, next_id)
+    except Exception:
+        log.exception("Failed to bootstrap id counter; continuing with default start")
 
     if generator.kafka_mode:
         log.info("Starting in KAFKA mode -- Lakebase poller active, no inline bridge")
@@ -184,6 +218,29 @@ async def generator_speed(body: SpeedRequest):
 @app.get("/api/generator/status")
 async def generator_status():
     return generator.status()
+
+
+# --- DB health / identity ---
+
+@app.get("/api/db-status")
+async def db_status():
+    """Reports which DB backend is active and whether it is reachable.
+
+    Used by the UI to surface a positive confirmation that the deployed app is
+    actually writing to Lakebase (vs having fallen back to the in-memory
+    MockDB).
+    """
+    db = get_db()
+    backend = "lakebase" if db.__class__.__name__ == "LakebaseDB" else "mock"
+    connected = await asyncio.to_thread(db.ping)
+    host = config.LAKEBASE_HOST if backend == "lakebase" else None
+    database = config.LAKEBASE_DATABASE if backend == "lakebase" else None
+    return {
+        "backend": backend,
+        "connected": connected,
+        "host": host,
+        "database": database,
+    }
 
 
 @app.post("/api/reset")

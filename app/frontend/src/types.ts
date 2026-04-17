@@ -41,3 +41,10 @@ export interface GeneratorStatus {
   tps: number;
   total_generated: number;
 }
+
+export interface DbStatus {
+  backend: "lakebase" | "mock";
+  connected: boolean;
+  host: string | null;
+  database: string | null;
+}

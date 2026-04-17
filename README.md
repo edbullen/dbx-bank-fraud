@@ -359,7 +359,33 @@ same steps apply after restoring or recreating the Lakebase instance.
    is not automatically a member of the auto-provisioned SP role — drop and
    recreate is less ceremony.)
 
-6. **Verify.** Restart the app and check `/logz`:
+6. **Lakehouse Sync (Lakebase → Delta) replica identity.**
+   Lakebase's Delta Lakehouse Sync is Postgres logical replication under the
+   hood. It **skips any table whose `REPLICA IDENTITY` is not `FULL`** and
+   shows it as `Skipped` in the *Start sync* dialog with the notice
+   *"Run `ALTER TABLE ... REPLICA IDENTITY FULL` to include them."*
+
+   The app's `ensure_tables()` (see `app/backend/db.py`) now issues
+   `ALTER TABLE scored_transactions REPLICA IDENTITY FULL;` as part of its
+   startup DDL, so every fresh drop/recreate cycle sets this automatically.
+   Verify from your laptop with:
+
+   ```sql
+   SELECT relname, relreplident
+   FROM pg_class
+   WHERE relname = 'scored_transactions';
+   -- relreplident = 'f'  → FULL (what we want)
+   -- relreplident = 'd'  → DEFAULT (sync will skip it)
+   ```
+
+   If a sync was active before you dropped the Lakebase table, click
+   **Disable sync** first in the Lakebase Branch overview to clear stale
+   config, then **Start sync** again. The other tables the dialog lists as
+   `Existing` (e.g. `bronze_transactions`, `banking_customers`) are unrelated
+   UC tables living in the target schema — Lakehouse Sync will leave them
+   alone.
+
+7. **Verify.** Restart the app and check `/logz`:
 
    - `OAuth token generated, expires at ...`
    - **no** `Using in-memory MockDB` line
@@ -367,6 +393,81 @@ same steps apply after restoring or recreating the Lakebase instance.
 
    You can also run `python scripts/lakebase_smoke_test.py` from your laptop
    to confirm the table is present and growing.
+
+#### Troubleshooting queries
+
+A few canned SQL snippets for debugging the deployed app. Run them connected
+to Lakebase as your user (the smoke test / `psql` with an OAuth token both
+work). All timestamp columns are `TIMESTAMPTZ` and are **stored in UTC**;
+values in `/logz` are shown in your local timezone (e.g. BST), so expect a
+timezone offset between the two views.
+
+**Is the pipeline alive right now?** Run this, start streaming for 20 s, run
+it again. Row count and `max_id` should advance; `age_of_newest_row` should
+shrink to < a minute.
+
+```sql
+SELECT
+  COUNT(*)                            AS total_rows,
+  MIN(id)                             AS min_id,
+  MAX(id)                             AS max_id,
+  MIN(scored_at) AT TIME ZONE 'UTC'   AS first_scored_utc,
+  MAX(scored_at) AT TIME ZONE 'UTC'   AS last_scored_utc,
+  NOW() - MAX(scored_at)              AS age_of_newest_row
+FROM scored_transactions;
+```
+
+**Show the newest rows.** (Note `ORDER BY ... DESC` — the default `ASC`
+returns the oldest rows, which is the trap that burns everyone at least
+once.)
+
+```sql
+SELECT id, scored_at AT TIME ZONE 'UTC' AS scored_utc,
+       type, amount, country_orig, country_dest,
+       fraud_prediction, fraud_probability
+FROM scored_transactions
+ORDER BY scored_at DESC
+LIMIT 20;
+```
+
+**Fraud rate over the last 5 minutes.**
+
+```sql
+SELECT
+  COUNT(*)                                                 AS rows_5m,
+  SUM(CASE WHEN fraud_prediction THEN 1 ELSE 0 END)        AS fraud_5m,
+  ROUND(100.0 * SUM(CASE WHEN fraud_prediction THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(*),0), 2)                           AS fraud_pct_5m
+FROM scored_transactions
+WHERE scored_at > NOW() - INTERVAL '5 minutes';
+```
+
+**Replica identity for Lakehouse Sync.** Must be `f` (FULL), otherwise
+Lakehouse Sync shows `scored_transactions` as `Skipped`. The app's
+`ensure_tables()` sets this automatically; this query just confirms it.
+
+```sql
+SELECT relname, relreplident
+FROM pg_class
+WHERE relname = 'scored_transactions';
+-- expect: relreplident = 'f'
+```
+
+**Reset the table without redeploying the app.** Safe because the app SP
+owns the table and has TRUNCATE rights via our grants:
+
+```sql
+TRUNCATE scored_transactions;
+```
+
+Equivalent to the **Reset Data** button in the app UI (which `POST`s to
+`/api/reset`). After truncate the generator's id counter is re-bootstrapped
+on the next app start, so IDs restart at `10_000_000`.
+
+**What is `PGUSER` / which SP am I granting to?** From the `fraud-analytics`
+app **Environment** tab. It'll be either the SP's UUID (the same value as
+`DATABRICKS_CLIENT_ID`) or a derived name. That's the role name you use
+inside double quotes in `GRANT ... TO "<APP_SP_UUID>"`.
 
 # OLD #
   
