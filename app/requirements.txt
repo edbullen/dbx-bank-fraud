@@ -2,5 +2,5 @@ fastapi
 uvicorn[standard]
 psycopg2-binary
 sse-starlette
-databricks-sdk
+databricks-sdk>=0.96
 python-dotenv

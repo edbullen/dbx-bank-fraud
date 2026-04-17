@@ -6,6 +6,8 @@ command:
 env:
   - name: MODEL_SERVING_ENDPOINT
     value: "bank-fraud-predict"
+  - name: LAKEBASE_ENDPOINT
+    value: "projects/retail-fraud/branches/production/endpoints/primary"
 resources:
   - name: lakebase-db
     lakebase:

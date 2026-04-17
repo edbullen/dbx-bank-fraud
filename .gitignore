@@ -8,3 +8,4 @@ __pycache__/
 app/.env
 app/frontend/node_modules/
 app/frontend/dist/
+.databricks/

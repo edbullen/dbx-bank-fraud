@@ -262,6 +262,112 @@ Databricks Workspace UI -> Serving -> Permissions -> Add <service_principal_clie
 10. Subsequent changes to code:
 Updates after code change - after changing backend/frontend, repeat build → sync → import-dir dist → deploy (or at least sync + dist when only UI changes).
 
+#### Post-deploy Lakebase bootstrapping
+
+Declaring `resources:` in `app/app.yaml` is **not enough** on its own to make
+the deployed app talk to Lakebase. The Databricks Apps platform only injects
+`PGHOST / PGPORT / PGDATABASE / PGUSER` (and sometimes `PGPASSWORD`) once the
+resource is **bound to the app in the UI**, and the app's **service principal**
+(SP) still has to be granted Postgres-level privileges separately from any
+Databricks-level ACLs.
+
+Work through this checklist the first time you deploy to a new workspace. The
+same steps apply after restoring or recreating the Lakebase instance.
+
+1. **Bind the Lakebase + Serving resources in the App UI.**
+   Compute → Apps → `fraud-analytics` → **Settings → Resources → Add resource**:
+
+   - **Database (Lakebase)**
+     - Resource key: `lakebase-db` ← must match the `name:` in `app.yaml`
+     - Database instance: your Lakebase instance
+     - Database name: `databricks_postgres`
+     - Permission: **Read and write**
+   - **Serving endpoint**
+     - Resource key: `fraud-model`
+     - Endpoint: `bank-fraud-predict`
+     - Permission: **Can query**
+
+   After saving, the app restarts and the **Environment** tab should show
+   `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`. If these never appear, the
+   binding did not take — fix that before anything else.
+
+2. **Set `LAKEBASE_ENDPOINT`.** The platform injects host/user/db but not
+   necessarily `PGPASSWORD`. The app falls back to OAuth token generation via
+   the Databricks SDK, which needs the Lakebase endpoint path. It is already
+   declared in `app/app.yaml`:
+
+   ```yaml
+   env:
+     - name: LAKEBASE_ENDPOINT
+       value: "projects/<project>/branches/<branch>/endpoints/<endpoint>"
+   ```
+
+   Update the value to match your workspace, or set it via the Environment tab.
+
+3. **Pin a recent `databricks-sdk`.** Lakebase OAuth uses
+   `WorkspaceClient.postgres.generate_database_credential(...)`, which only
+   exists in recent SDK releases. `app/requirements.txt` pins
+   `databricks-sdk>=0.96`; keep that, or bump it.
+
+4. **Grant Postgres privileges to the app SP.** "Can manage" on the Lakebase
+   instance is a *Databricks-level* ACL — Postgres inside the database needs
+   its own grants. Connect as your own user (the smoke test or `psql` with an
+   OAuth token will do) and run:
+
+   ```sql
+   -- Replace with the SP UUID from PGUSER (also = DATABRICKS_CLIENT_ID in the
+   -- app Environment tab). Keep the double quotes.
+   GRANT USAGE, CREATE ON SCHEMA public TO "<APP_SP_UUID>";
+   GRANT SELECT, INSERT, UPDATE, DELETE ON scored_transactions TO "<APP_SP_UUID>";
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public
+     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "<APP_SP_UUID>";
+   ```
+
+5. **Make the app SP own its own table** (first deploy, or when reusing an
+   existing Lakebase that already contains `scored_transactions`).
+
+   The app's startup runs `CREATE TABLE IF NOT EXISTS` *and*
+   `CREATE INDEX IF NOT EXISTS`. Postgres enforces table ownership on the
+   index DDL even when the indexes already exist, so if your user created the
+   table earlier (e.g. during local dev) the deployed app will fail with
+   `must be owner of table scored_transactions`.
+
+   The cleanest fix is to drop the table and let the SP recreate it on
+   startup. The rows are already replicated to Delta via Lakehouse Sync, so
+   there is no real data loss for the demo:
+
+   ```sql
+   DROP TABLE IF EXISTS scored_transactions CASCADE;
+   ```
+
+   Restart the app. It creates the table, becomes the owner, and subsequent
+   restarts are idempotent.
+
+   If you need to preserve the Lakebase rows, back them up first, let the SP
+   recreate the table, then reload:
+
+   ```sql
+   CREATE TABLE scored_transactions_backup AS SELECT * FROM scored_transactions;
+   DROP TABLE scored_transactions CASCADE;
+   -- restart the app so the SP creates the new table
+   INSERT INTO scored_transactions SELECT * FROM scored_transactions_backup;
+   DROP TABLE scored_transactions_backup;
+   ```
+
+   (Transferring ownership via `ALTER TABLE ... OWNER TO "<APP_SP_UUID>"`
+   usually fails in Lakebase with `must be able to SET ROLE` because your user
+   is not automatically a member of the auto-provisioned SP role — drop and
+   recreate is less ceremony.)
+
+6. **Verify.** Restart the app and check `/logz`:
+
+   - `OAuth token generated, expires at ...`
+   - **no** `Using in-memory MockDB` line
+   - bridge inserts appearing as transactions score
+
+   You can also run `python scripts/lakebase_smoke_test.py` from your laptop
+   to confirm the table is present and growing.
+
 # OLD #
   
 ----------------------------------------------------------------------------------------------------
