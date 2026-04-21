@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS scored_transactions (
     lastname        TEXT,
     country_orig    TEXT,
     country_dest    TEXT,
+    old_balance_orig  DOUBLE PRECISION,
+    new_balance_orig  DOUBLE PRECISION,
+    old_balance_dest  DOUBLE PRECISION,
+    new_balance_dest  DOUBLE PRECISION,
     fraud_prediction BOOLEAN NOT NULL,
     fraud_probability DOUBLE PRECISION,
     scored_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -167,13 +171,17 @@ class LakebaseDB:
                     """INSERT INTO scored_transactions
                        (id, timestamp, type, amount, customer_id,
                         firstname, lastname, country_orig, country_dest,
+                        old_balance_orig, new_balance_orig,
+                        old_balance_dest, new_balance_dest,
                         fraud_prediction, fraud_probability, scored_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                        ON CONFLICT (id) DO NOTHING""",
                     (
                         txn["id"], txn["timestamp"], txn["type"], txn["amount"],
                         txn.get("customer_id"), txn.get("firstname"), txn.get("lastname"),
                         txn["country_orig"], txn["country_dest"],
+                        txn.get("old_balance_orig"), txn.get("new_balance_orig"),
+                        txn.get("old_balance_dest"), txn.get("new_balance_dest"),
                         txn["fraud_prediction"], txn["fraud_probability"],
                         txn["scored_at"],
                     ),

@@ -35,13 +35,16 @@ LLM_ENDPOINT = dbutils.widgets.get("llm_endpoint")
 SERVING_ENDPOINT_NAME = (dbutils.widgets.get("serving_endpoint_name") or "").strip()
 
 # UC dotted names for toolkit / resources (no backticks)
-UC_FUNCTION_FQN = f"{unity_catalog}.{unity_schema}.explain_transaction_risk"
+UC_FUNCTION_HISTORICAL = f"{unity_catalog}.{unity_schema}.explain_transaction_risk"
+UC_FUNCTION_LIVE = f"{unity_catalog}.{unity_schema}.explain_live_transaction_risk"
+UC_FUNCTION_FQNS = [UC_FUNCTION_HISTORICAL, UC_FUNCTION_LIVE]
 UC_MODEL_NAME = f"{unity_catalog}.{unity_schema}.fraud_model_explain"
 UC_GOLD_TABLE = f"{unity_catalog}.{unity_schema}.gold_transactions"
+UC_LIVE_TABLE = f"{unity_catalog}.{unity_schema}.live_transactions"
 
 print(f"Catalog: {unity_catalog}, Schema: {unity_schema}")
 print(f"LLM endpoint: {LLM_ENDPOINT}")
-print(f"UC function: {UC_FUNCTION_FQN}, Model: {UC_MODEL_NAME}")
+print(f"UC functions: {UC_FUNCTION_FQNS}, Model: {UC_MODEL_NAME}")
 if SERVING_ENDPOINT_NAME:
     print(f"Serving endpoint name: {SERVING_ENDPOINT_NAME}")
 else:
@@ -87,15 +90,24 @@ llm = ChatDatabricks(
     max_tokens=500,
 )
 
-toolkit = UCFunctionToolkit(function_names=[UC_FUNCTION_FQN])
+toolkit = UCFunctionToolkit(function_names=UC_FUNCTION_FQNS)
 tools = toolkit.tools
 
 SYSTEM_PROMPT = (
-    "You are a retail banking fraud-risk assistant.\n"
-    "When the user asks why a transaction looks risky/suspicious, call the tool "
-    f"`{UC_FUNCTION_FQN}` with the transaction id.\n"
-    "The tool returns a table with a single row. Use the first row.\n"
-    "Explain the top 2–3 signals clearly and briefly, and include the risk score."
+    "You are a retail banking fraud-risk assistant. Two tools are available:\n"
+    f"- `{UC_FUNCTION_LIVE}`: explains a LIVE transaction by id (real-time data "
+    "flowing through the deployed app, sourced from `live_transactions`).\n"
+    f"- `{UC_FUNCTION_HISTORICAL}`: explains a HISTORICAL transaction by id "
+    "(static training data, sourced from `gold_transactions`).\n\n"
+    "Routing rules:\n"
+    "1. If the user explicitly tags an id (e.g. 'live txn N' or 'historical "
+    "txn N'), honour the tag.\n"
+    "2. If the user has set a session context (e.g. 'we are working off live "
+    "transactions' or 'use historical'), apply it to subsequent bare ids.\n"
+    "3. If unspecified, default to LIVE and tell the user which dataset you "
+    "queried.\n\n"
+    "The tool returns a table with a single row. Use the first row. Explain "
+    "the top 2-3 signals clearly and briefly, and include the risk score."
 )
 
 agent = create_agent(
@@ -106,14 +118,14 @@ agent = create_agent(
 
 # COMMAND ----------
 
-# DBTITLE 1,Test the agent
+# DBTITLE 1,Test the agent (historical id, explicit tag)
 from pprint import pprint
 
-transaction_id = 620650
+historical_transaction_id = 620650
 
 result = agent.invoke({
     "messages": [
-        {"role": "user", "content": f"Why does transaction {transaction_id} look risky?"}
+        {"role": "user", "content": f"Why does historical txn {historical_transaction_id} look risky?"}
     ]
 })
 
@@ -121,8 +133,23 @@ pprint(result["messages"][-1])
 
 # COMMAND ----------
 
-# DBTITLE 1,Cleaned text output
-final_msg = result["messages"][-1]
+# DBTITLE 1,Test the agent (live id via session context)
+# Substitute a real id from live_transactions if you have one running.
+live_transaction_id = 10000000
+
+result_live = agent.invoke({
+    "messages": [
+        {"role": "user", "content": "We are working off live transactions for this session."},
+        {"role": "user", "content": f"Why does transaction {live_transaction_id} look risky?"}
+    ]
+})
+
+pprint(result_live["messages"][-1])
+
+# COMMAND ----------
+
+# DBTITLE 1,Cleaned text output (last test)
+final_msg = result_live["messages"][-1]
 print(getattr(final_msg, "content", final_msg))
 
 # COMMAND ----------
@@ -157,18 +184,27 @@ from langchain_core.runnables import RunnableLambda
 
 LLM_ENDPOINT = "__LLM_ENDPOINT__"
 
-UC_FUNCTION_FQN = "__UC_FUNCTION_FQN__"
+UC_FUNCTION_HISTORICAL = "__UC_FUNCTION_HISTORICAL__"
+UC_FUNCTION_LIVE = "__UC_FUNCTION_LIVE__"
+UC_FUNCTION_FQNS = [UC_FUNCTION_HISTORICAL, UC_FUNCTION_LIVE]
 
 SYSTEM_PROMPT = (
-    "You are a retail banking fraud-risk assistant. "
-    "When the user asks why a transaction looks risky/suspicious, "
-    "call the tool `" + UC_FUNCTION_FQN + "` with the transaction id. "
-    "The tool returns a table with a single row; use the first row. "
-    "Explain the top 2–3 signals clearly and briefly, and include the risk score."
+    "You are a retail banking fraud-risk assistant. Two tools are available: "
+    "`" + UC_FUNCTION_LIVE + "` explains a LIVE transaction by id (real-time data "
+    "flowing through the deployed app, sourced from live_transactions). "
+    "`" + UC_FUNCTION_HISTORICAL + "` explains a HISTORICAL transaction by id "
+    "(static training data, sourced from gold_transactions). "
+    "Routing rules: "
+    "1) If the user explicitly tags an id ('live txn N' or 'historical txn N'), honour the tag. "
+    "2) If the user has set a session context ('we are working off live transactions' / 'use historical'), "
+    "apply it to subsequent bare ids. "
+    "3) If unspecified, default to LIVE and tell the user which dataset you queried. "
+    "The tool returns a table with one row; use the first row. "
+    "Explain the top 2-3 signals clearly and briefly, and include the risk score."
 )
 
 llm = ChatDatabricks(endpoint=LLM_ENDPOINT, temperature=0.1, max_tokens=500)
-toolkit = UCFunctionToolkit(function_names=[UC_FUNCTION_FQN])
+toolkit = UCFunctionToolkit(function_names=UC_FUNCTION_FQNS)
 tools = toolkit.tools
 _agent = create_agent(model=llm, tools=tools, system_prompt=SYSTEM_PROMPT)
 
@@ -216,7 +252,8 @@ mlflow.models.set_model(model)
 
 agent_py = (
     _AGENT_BODY.replace("__LLM_ENDPOINT__", LLM_ENDPOINT.replace("\\", "\\\\").replace('"', '\\"'))
-    .replace("__UC_FUNCTION_FQN__", UC_FUNCTION_FQN)
+    .replace("__UC_FUNCTION_HISTORICAL__", UC_FUNCTION_HISTORICAL)
+    .replace("__UC_FUNCTION_LIVE__", UC_FUNCTION_LIVE)
 )
 
 # COMMAND ----------
@@ -266,8 +303,10 @@ mlflow.set_registry_uri("databricks-uc")
 
 resources = [
     r.DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT),
-    r.DatabricksFunction(function_name=UC_FUNCTION_FQN),
+    r.DatabricksFunction(function_name=UC_FUNCTION_HISTORICAL),
+    r.DatabricksFunction(function_name=UC_FUNCTION_LIVE),
     r.DatabricksTable(table_name=UC_GOLD_TABLE),
+    r.DatabricksTable(table_name=UC_LIVE_TABLE),
 ]
 
 input_example = {"messages": [{"role": "user", "content": "Say hello then explain why transaction 123 looks risky."}]}
@@ -294,7 +333,7 @@ print("Registered:", mv.name, "version", mv.version)
 # MAGIC %md
 # MAGIC ### Step 3.3 - Deploy the Agent and Serve it
 # MAGIC
-# MAGIC **Permission requirements:** EXECUTE on the UC function, SELECT on `gold_transactions`, permission to call the LLM serving endpoint.
+# MAGIC **Permission requirements:** EXECUTE on both UC functions (`explain_transaction_risk`, `explain_live_transaction_risk`), SELECT on `gold_transactions` and `live_transactions`, permission to call the LLM serving endpoint.
 
 # COMMAND ----------
 

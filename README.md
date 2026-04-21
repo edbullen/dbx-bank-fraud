@@ -181,9 +181,20 @@ Rest API JSON Payload - predicts 0 ( Not Fraud)
 
 ## 3. Deploy UC Function + AI Chat Agent using UC Function tool
 
-+ Create the UC function `explain_transaction_risk()`  
-+ Register the UC model **`fraud_model_explain`** (LangChain + `ChatDatabricks` + foundation LLM)  
++ Create two UC functions: `explain_transaction_risk()` (historical, reads
+  `gold_transactions`) and `explain_live_transaction_risk()` (live, reads
+  `live_transactions` with CDC dedup; baselines from `gold_transactions`).
++ Register the UC model **`fraud_model_explain`** (LangChain + `ChatDatabricks` +
+  foundation LLM) — one agent, both functions registered as tools.
 + Serve it as a model serving endpoint (default name via deploy: **`bank-fraud-explain`** — hyphens; UC model uses underscores)
+
+The agent picks which tool to call from the conversation:
+
+- Explicit tag: `"Why does live txn 10003599 look risky?"` or `"... historical txn 620650 ..."`.
+- Session context: open the chat with `"We are working off live transactions for this session."` then ask bare ids.
+- If unspecified, the agent defaults to **live** and tells you which dataset it queried.
+
+See [Live agent and dual-tool routing](#live-agent-and-dual-tool-routing) below for the schema migration and prompt-pattern details.
 
 **Automated run** (assumes agent notebooks are already in the workspace, or omit `--skip-notebooks` to import everything first):
 
@@ -411,8 +422,8 @@ SELECT
   COUNT(*)                            AS total_rows,
   MIN(id)                             AS min_id,
   MAX(id)                             AS max_id,
-  MIN(scored_at) AT TIME ZONE 'UTC'   AS first_scored_utc,
-  MAX(scored_at) AT TIME ZONE 'UTC'   AS last_scored_utc,
+    MIN(from_utc_timestamp(scored_at, 'UTC')) AS first_scored_utc,
+  MAX(from_utc_timestamp(scored_at, 'UTC'))    AS last_scored_utc,
   NOW() - MAX(scored_at)              AS age_of_newest_row
 FROM scored_transactions;
 ```
@@ -468,6 +479,101 @@ on the next app start, so IDs restart at `10_000_000`.
 app **Environment** tab. It'll be either the SP's UUID (the same value as
 `DATABRICKS_CLIENT_ID`) or a derived name. That's the role name you use
 inside double quotes in `GRANT ... TO "<APP_SP_UUID>"`.
+
+### Live agent and dual-tool routing
+
+The fraud-explanation agent serves **both** historical and live transactions
+from a single endpoint (`bank-fraud-explain`). The LLM picks which UC function
+to call from the conversation context. There is also a one-time schema
+migration to bring the live data up to the column shape the risk function
+needs.
+
+**Schema migration — adding the four balance columns to `scored_transactions`.**
+
+The risk-scoring function uses `oldBalanceOrig / newBalanceOrig / oldBalanceDest
+/ newBalanceDest` to compute the "drains origin" and "empty destination" signals
+(50 of the 100 risk-score points). The Lakebase table did not originally
+persist them, so the live Delta replica did not have them either. The DDL in
+[app/backend/db.py](app/backend/db.py) now includes these columns
+(`old_balance_orig`, `new_balance_orig`, `old_balance_dest`,
+`new_balance_dest`); the generator already produces the values, so no other
+app-side code change is needed.
+
+Migration steps (one-time, in order):
+
+1. Stop the `fraud-analytics` app (or click **Reset Data** in its UI to
+   truncate first).
+2. In Lakebase psql, drop the table so the app SP recreates it as the owner
+   on next start (the existing table is owned by your user, so `ALTER TABLE
+   ADD COLUMN` would also work but the rest of the demo's drop/recreate
+   muscle memory applies):
+
+   ```sql
+   DROP TABLE IF EXISTS scored_transactions CASCADE;
+   ```
+
+3. Restart the app. `ensure_tables()` recreates the table with the four new
+   columns, the indexes, and `REPLICA IDENTITY FULL`.
+4. In the Lakebase Sync UI, **Disable** the existing sync to
+   `live_transactions`, drop the Delta target table, then **Enable** sync
+   again so it picks up the new schema.
+
+After a few transactions stream through, confirm with:
+
+```sql
+SELECT id, type, amount,
+       old_balance_orig, new_balance_orig,
+       old_balance_dest, new_balance_dest,
+       fraud_prediction
+FROM live_transactions
+ORDER BY _pg_lsn DESC
+LIMIT 5;
+```
+
+**The two UC functions.** Both are created by
+[notebooks/agent/1. Create Function.py](notebooks/agent/1.%20Create%20Function.py):
+
+| Function | `tx` lookup source | `type_stats` baseline source |
+|---|---|---|
+| `explain_transaction_risk(tx_id)` | `gold_transactions` | `gold_transactions` |
+| `explain_live_transaction_risk(tx_id)` | `live_transactions` (deduped) | `gold_transactions` |
+
+The live function wraps its `tx` lookup with a small CDC dedup so it scores
+the **current state** of an id rather than every event:
+
+```sql
+SELECT *
+FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY id ORDER BY _pg_lsn DESC) AS _rn
+  FROM live_transactions
+  WHERE id = CAST(tx_id AS BIGINT)
+)
+WHERE _rn = 1 AND _pg_change_type <> 'delete'
+```
+
+`_pg_lsn` is monotonically increasing, so `MAX(_pg_lsn)` per `id` is the most
+recent event. We exclude `delete` events so a deleted id reports as
+not-found rather than as a stale row. Type-percentile baselines come from
+`gold_transactions` because the live table is too small/cold early in a demo
+to give meaningful p95/p99 amounts.
+
+**The dual-tool agent.** [notebooks/agent/2. Register Agent.py](notebooks/agent/2.%20Register%20Agent.py)
+registers a single UC model `fraud_model_explain` whose toolkit includes both
+functions. Re-running the notebook end-to-end logs a new MLflow version and
+redeploys the same `bank-fraud-explain` serving endpoint — the URL is
+preserved, so [notebooks/agent/3. Query Endpoint.py](notebooks/agent/3.%20Query%20Endpoint.py)
+and any other downstream consumer keeps working without changes.
+
+**Prompt patterns for picking the right tool.**
+
+- *Explicit tag* (most reliable): `"Why does live txn 10003599 look risky?"`
+  / `"Why does historical txn 620650 look risky?"`. The keyword forces the
+  right tool regardless of session context.
+- *Session context*: open with `"We are working off live transactions for
+  this session."` then ask bare ids. The LLM applies that context to
+  subsequent turns until you say otherwise.
+- *Unspecified*: defaults to **live** and the agent tells you which dataset
+  it queried.
 
 # OLD #
   

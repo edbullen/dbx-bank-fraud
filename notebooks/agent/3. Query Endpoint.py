@@ -203,9 +203,9 @@ def extract_text(serving_response):
 
 # COMMAND ----------
 
-# DBTITLE 1,Example query
+# DBTITLE 1,Example query (historical, explicit tag)
 messages = [
-    {"role": "user", "content": "Why does transaction 620650 look risky?"},
+    {"role": "user", "content": "Why does historical txn 620650 look risky?"},
 ]
 
 result = query_serving_endpoint(endpoint, messages)
@@ -218,6 +218,33 @@ print("Raw response:", result["response"])
 text = extract_text(result)
 print("\n--- Extracted text / assistant payload ---\n")
 print(text)
+
+# COMMAND ----------
+
+# DBTITLE 1,Example query (live, session-context prompt)
+# Substitute a real id from live_transactions (e.g. one flagged as fraud in the
+# app UI). The first message sets the dataset context for the rest of the chat.
+live_messages = [
+    {"role": "user", "content": "We are working off live transactions for this session."},
+    {"role": "user", "content": "Why does transaction 10000000 look risky?"},
+]
+
+result_live = query_serving_endpoint(endpoint, live_messages)
+print("\n--- Live (session-context) ---\n")
+print(extract_text(result_live))
+
+# COMMAND ----------
+
+# DBTITLE 1,Example query (live, explicit tag)
+# Most reliable form: the explicit "live txn" tag forces the live tool
+# regardless of session context.
+live_tag_messages = [
+    {"role": "user", "content": "Why does live txn 10000000 look risky?"},
+]
+
+result_live_tag = query_serving_endpoint(endpoint, live_tag_messages)
+print("\n--- Live (explicit tag) ---\n")
+print(extract_text(result_live_tag))
 
 # COMMAND ----------
 
