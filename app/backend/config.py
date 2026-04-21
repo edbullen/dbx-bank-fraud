@@ -21,6 +21,11 @@ LAKEBASE_SSLMODE = os.getenv("LAKEBASE_SSLMODE", os.getenv("PGSSLMODE", "require
 # --- Model Serving ---
 MODEL_SERVING_ENDPOINT = os.getenv("MODEL_SERVING_ENDPOINT", "bank-fraud-predict")
 
+# --- Fraud-explanation agent (LangChain + UC-function tools) ---
+# Overridable without redeploy; defaults to the endpoint name created by
+# notebooks/agent/2. Register Agent.py.
+FRAUD_EXPLAIN_ENDPOINT = os.getenv("FRAUD_EXPLAIN_ENDPOINT", "bank-fraud-explain")
+
 # --- Unity Catalog ---
 UNITY_CATALOG = os.getenv("UNITY_CATALOG", "")
 UNITY_SCHEMA = os.getenv("UNITY_SCHEMA", "")

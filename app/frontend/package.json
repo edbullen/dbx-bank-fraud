@@ -9,11 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "plotly.js-dist-min": "^2.35.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.15.3",
-    "plotly.js-dist-min": "^2.35.3",
-    "react-plotly.js": "^2.6.0"
+    "react-markdown": "^10.1.0",
+    "react-plotly.js": "^2.6.0",
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

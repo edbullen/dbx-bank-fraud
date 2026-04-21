@@ -26,7 +26,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -251,6 +251,51 @@ async def reset_data():
     reset_id_counter()
     get_db().clear_data()
     return {"status": "cleared"}
+
+
+# --- Fraud explanation agent proxy ---
+
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant" | "system"
+    content: str
+
+
+class ExplainRequest(BaseModel):
+    messages: list[ChatMessage]
+
+
+@app.post("/api/explain-fraud")
+async def explain_fraud(body: ExplainRequest):
+    """Proxies the Operations tab chat UI to the `bank-fraud-explain` agent.
+
+    Keeps the workspace bearer token server-side (the SDK resolves it from
+    the app SP). The blocking SDK call is offloaded to a thread so the
+    event loop is not stalled while the agent thinks.
+    """
+    try:
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient()
+        payload = [{"messages": [m.dict() for m in body.messages]}]
+        resp = await asyncio.to_thread(
+            lambda: w.serving_endpoints.query(
+                name=config.FRAUD_EXPLAIN_ENDPOINT,
+                dataframe_records=payload,
+            )
+        )
+    except Exception:
+        log.exception("Fraud-explain agent call failed")
+        raise HTTPException(status_code=502, detail="agent unavailable")
+
+    pred = resp.predictions[0] if resp.predictions else ""
+    if isinstance(pred, dict):
+        ch = pred.get("choices") or []
+        if ch and isinstance(ch[0], dict):
+            text = (ch[0].get("message") or {}).get("content", str(pred))
+        else:
+            text = pred.get("content") or str(pred)
+    else:
+        text = str(pred)
+    return {"role": "assistant", "content": text}
 
 
 # --- Serve React frontend ---

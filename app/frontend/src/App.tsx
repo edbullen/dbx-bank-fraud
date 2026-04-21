@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { Dashboard } from "./components/Dashboard";
 import { Controls } from "./components/Controls";
+import { TabBar, type TabId } from "./components/TabBar";
+import { OperationsTab } from "./components/OperationsTab";
 import { useEventStream } from "./hooks/useEventStream";
 import type {
   ScoredTransaction,
@@ -24,6 +26,7 @@ function App() {
   const [countryFlows, setCountryFlows] = useState<CountryFlow[]>([]);
   const [timeSeries, setTimeSeries] = useState<TimeBucket[]>([]);
   const [generatorRunning, setGeneratorRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
 
   const handleTransaction = useCallback((txn: ScoredTransaction) => {
     setTransactions((prev) => {
@@ -138,20 +141,27 @@ function App() {
           connected={connected}
         />
       </header>
+      <TabBar activeTab={activeTab} onChange={setActiveTab} />
       <main className="p-4">
-        <Dashboard
-          metrics={metrics}
-          transactions={transactions}
-          countryFlows={countryFlows}
-          timeSeries={timeSeries}
-        />
+        {activeTab === "dashboard" ? (
+          <Dashboard
+            metrics={metrics}
+            transactions={transactions}
+            countryFlows={countryFlows}
+            timeSeries={timeSeries}
+          />
+        ) : (
+          <OperationsTab transactions={transactions} />
+        )}
       </main>
-      <button
-        onClick={handleReset}
-        className="fixed bottom-4 right-4 px-4 py-2 rounded text-sm font-medium bg-dbx-red text-white hover:bg-dbx-red/90 shadow-lg transition-all"
-      >
-        Reset Data
-      </button>
+      {activeTab === "dashboard" && (
+        <button
+          onClick={handleReset}
+          className="fixed bottom-4 right-4 px-4 py-2 rounded text-sm font-medium bg-dbx-red text-white hover:bg-dbx-red/90 shadow-lg transition-all"
+        >
+          Reset Data
+        </button>
+      )}
     </div>
   );
 }

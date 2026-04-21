@@ -48,3 +48,10 @@ export interface DbStatus {
   host: string | null;
   database: string | null;
 }
+
+export type ChatRole = "user" | "assistant" | "system";
+
+export interface ChatMessage {
+  role: ChatRole;
+  content: string;
+}

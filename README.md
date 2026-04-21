@@ -575,6 +575,90 @@ and any other downstream consumer keeps working without changes.
 - *Unspecified*: defaults to **live** and the agent tells you which dataset
   it queried.
 
+### Operations tab and in-app chat with the fraud agent
+
+The web UI has a second tab, **Operations**, which simulates a simple
+business operations screen on top of the agent. It reuses the live SSE
+stream (no extra API polling), so the same data powers both tabs.
+
+- **Left pane — Fraud Inbox.** Rolling list of the most recent 10
+  fraud-flagged transactions. Each row shows time, id, customer, type,
+  amount, country pair, and a probability bar. A "Verified" checkbox is
+  included as a **cosmetic stub** to illustrate a future verification
+  workflow — it stores state in local React only and does nothing on the
+  backend.
+- **Right pane — Fraud Explanation Agent.** Chat dialog that talks to the
+  `bank-fraud-explain` serving endpoint. Selecting a transaction
+  pre-fills `"Why does live txn {id} look risky?"` (explicit tag, so the
+  dual-tool agent reliably picks `explain_live_transaction_risk`).
+  Pressing Send posts the chat history to the new backend proxy
+  `/api/explain-fraud`; the proxy calls the agent via the Databricks SDK,
+  keeping the workspace bearer token server-side.
+- **Backend proxy.** [app/backend/main.py](app/backend/main.py) exposes
+  `POST /api/explain-fraud`, which accepts `{messages: [{role, content}]}`,
+  calls `WorkspaceClient().serving_endpoints.query(...)` on
+  `FRAUD_EXPLAIN_ENDPOINT` (defaults to `bank-fraud-explain`, overridable
+  via env var), and returns `{role: "assistant", content: "..."}`. The
+  blocking SDK call is offloaded with `asyncio.to_thread`, and failures
+  surface as HTTP 502 so the UI can render a graceful fallback.
+- **Resource binding.** [app/app.yaml](app/app.yaml) now declares a
+  `fraud-explain-agent` resource for the `bank-fraud-explain` endpoint.
+  After redeploy you must bind it in **App → Settings → Resources**
+  (same drill as the original `fraud-model` binding) so the app SP gets
+  `CAN_QUERY` on the agent endpoint.
+
+**Operational checklist after pulling these changes.**
+
+Follow the same four-command deploy flow as
+[Deployment Steps - Databricks CLI](#deployment-steps---databricks-cli).
+Skipping the `import-dir` step is the most common failure mode: the
+built frontend bundle lives in `app/frontend/dist/`, which is listed in
+`.gitignore`, so `databricks sync` will **not** upload it on its own.
+Without the import step the app keeps serving the previously-deployed
+bundle and any new UI (for example the Operations tab) is invisible.
+
+```bash
+# 1. Rebuild the React bundle (required after any frontend source change)
+cd app/frontend && npm run build && cd ../..
+
+# 2. Sync Python sources + app.yaml to the workspace
+databricks sync app \
+  /Workspace/Users/<user.name>@databricks.com/fraud-analytics \
+  --profile <my-profile>
+
+# 3. REQUIRED: push the built bundle separately (dist/ is gitignored)
+databricks workspace import-dir app/frontend/dist \
+  /Workspace/Users/<user.name>@databricks.com/fraud-analytics/frontend/dist \
+  --profile <my-profile> --overwrite
+
+# 4. Redeploy
+databricks apps deploy fraud-analytics \
+  --source-code-path /Workspace/Users/<user.name>@databricks.com/fraud-analytics \
+  --profile <my-profile>
+```
+
+Then:
+
+5. **Bind the agent resource (one-time, required).** In the app UI:
+   **Compute → Apps → fraud-analytics → Edit → Resources → Add resource**.
+   Type `Serving endpoint`, resource key `fraud-explain-agent` (must match
+   `app.yaml`), endpoint `bank-fraud-explain`, permission **Can Query**.
+   Save and let it redeploy. Without this the chat returns 502
+   `PermissionDenied: You do not have permission to query the endpoint`.
+6. Restart the app and confirm `/logz` is clean.
+7. Hard-reload the browser (Cmd+Shift+R on macOS). The `index.html`
+   references a hash-named JS bundle, so a cached `index.html` can still
+   point at the previous hash even after a redeploy.
+8. Open the Operations tab, start streaming on the Dashboard tab, wait
+   for a fraud to appear, select it, then press Send on the pre-filled
+   prompt. You should see an explanation within a few seconds.
+
+**Sanity check if the UI looks stale.** Open browser devtools → Network
+and inspect the request for `/assets/index-*.js`. Compare the hash
+against the file you just built locally
+(`ls app/frontend/dist/assets/`). A mismatch means the `import-dir`
+step either did not run or imported into the wrong workspace path.
+
 # OLD #
   
 ----------------------------------------------------------------------------------------------------

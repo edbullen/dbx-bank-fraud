@@ -17,3 +17,7 @@ resources:
     serving_endpoint:
       name: bank-fraud-predict
       permission: CAN_QUERY
+  - name: fraud-explain-agent
+    serving_endpoint:
+      name: bank-fraud-explain
+      permission: CAN_QUERY
